@@ -1,0 +1,4 @@
+{
+  "extends": "@ojarun/config/tsconfig.base.json",
+  "include": ["src"]
+}
