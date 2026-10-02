@@ -1,7 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+nodeLinker: hoisted
 allowBuilds:
+  browser-tabs-lock: false
+  core-js: false
   esbuild: true
 minimumReleaseAgeExclude:
   - '@turbo/darwin-64@2.11.7'
