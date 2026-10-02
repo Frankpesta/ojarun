@@ -30,6 +30,18 @@ importers:
         specifier: ^5.0.3
         version: 5.0.3(vite@8.3.2)
 
+  packages/ui:
+    devDependencies:
+      '@ojarun/config':
+        specifier: workspace:*
+        version: link:../config
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(vite@8.3.2)
+
 packages:
 
   '@jridgewell/resolve-uri@3.1.2':
