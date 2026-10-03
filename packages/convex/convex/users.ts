@@ -1,8 +1,9 @@
 import { v } from "convex/values";
 import { normalizeNigerianPhone } from "@ojarun/shared";
-import { mutation, query } from "./_generated/server";
-import { authedMutation, getCurrentUser } from "./lib/auth";
+import { internalQuery, mutation, query } from "./_generated/server";
+import { authedMutation, getCurrentUser, requireUser } from "./lib/auth";
 import { appError, ErrorCode } from "./lib/errors";
+import { role } from "./schema";
 
 /**
  * Called once after sign-in. Creates the user as a customer; never accepts a role (05 §5.2).
@@ -83,5 +84,14 @@ export const registerPushToken = authedMutation({
       return;
     }
     await ctx.db.insert("pushTokens", { userId: ctx.user._id, token, platform, updatedAt: Date.now() });
+  },
+});
+
+/** Role check for actions, which can't use the query/mutation wrappers. See lib/actionAuth. */
+export const assertCaller = internalQuery({
+  args: { roles: v.optional(v.array(role)) },
+  handler: async (ctx, { roles }) => {
+    const user = await requireUser(ctx, roles);
+    return { _id: user._id, role: user.role };
   },
 });

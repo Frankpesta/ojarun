@@ -33,6 +33,10 @@ export const settingsSchema = z.object({
   maxOrdersPerBatch: z.number().int().positive(),
   cashAdvanceSuggestPct: z.number().int().min(0).max(100),
   paymentHoldMinutes: z.number().int().positive(),
+  /** Stand-in for shift data: slot capacity = template capacityPerShopper × this. */
+  expectedShoppersPerSlot: z.number().int().min(0),
+  /** Customers can book today plus this many days ahead. */
+  bookingDaysAhead: z.number().int().min(0).max(6),
   showPriceGuide: z.boolean(),
   supportWhatsapp: z.string(),
   supportPhone: z.string(),
@@ -72,6 +76,8 @@ export const DEFAULT_SETTINGS: Settings = {
   maxOrdersPerBatch: 4,
   cashAdvanceSuggestPct: 30,
   paymentHoldMinutes: 30,
+  expectedShoppersPerSlot: 2,
+  bookingDaysAhead: 1,
   showPriceGuide: false,
   supportWhatsapp: "",
   supportPhone: "",
