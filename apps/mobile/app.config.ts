@@ -31,6 +31,8 @@ const config: ExpoConfig = {
     "expo-router",
     "expo-secure-store",
     "expo-web-browser",
+    // Android Maps SDK key, restricted to the package name + SHA-1. Set as an EAS secret.
+    ["react-native-maps", { androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_ANDROID_KEY }],
     [
       // Source maps upload on EAS when SENTRY_AUTH_TOKEN is set as an EAS secret.
       "@sentry/react-native/expo",

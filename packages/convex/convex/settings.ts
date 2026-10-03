@@ -20,6 +20,8 @@ export const publicSettings = authedQuery({
       showPriceGuide: s.showPriceGuide,
       supportWhatsapp: s.supportWhatsapp,
       supportPhone: s.supportPhone,
+      /** For live "outside our area" feedback while placing a pin; the server re-checks on save. */
+      geofence: s.geofence,
     };
   },
 });

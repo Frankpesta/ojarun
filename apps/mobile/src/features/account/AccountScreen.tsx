@@ -1,6 +1,6 @@
 import { View } from "react-native";
 import { router } from "expo-router";
-import { ChatCircleText, Moon, Palette, SignOut } from "phosphor-react-native";
+import { ChatCircleText, MapPin, Moon, Palette, SignOut } from "phosphor-react-native";
 import { formatNigerianPhone } from "@ojarun/shared";
 import { Card, Divider, ListItem, Screen, Text, useSheet } from "@/components";
 import { useMe } from "@/features/auth/useSession";
@@ -50,6 +50,12 @@ export function AccountScreen({ audience }: { audience: "customer" | "shopper" }
         <Text variant="caption" tone="muted" className="mb-1 uppercase tracking-wider">
           Settings
         </Text>
+        {audience === "customer" ? (
+          <>
+            <ListItem icon={MapPin} title="Saved addresses" subtitle="Where we deliver" onPress={() => router.push("/addresses")} />
+            <Divider />
+          </>
+        ) : null}
         <ListItem
           icon={preference === "dark" ? Moon : Palette}
           title="Appearance"

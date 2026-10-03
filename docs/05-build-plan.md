@@ -131,6 +131,12 @@ ojarun/
   turbo.json  package.json  pnpm-workspace.yaml
 ```
 
+**As built (differences from the sketch above):**
+- Mobile routes live in `apps/mobile/src/app` (the Expo SDK 57 default), not `apps/mobile/app`.
+- The group home screens are `/(customer)/home` and `/(shopper)/today`, so they don't clash with the role router at `/`.
+- Addresses are root stack screens: `/addresses` (address book) and `/address?id=` (add or edit, with the map). They're reached from Account, and from checkout in M2.
+- Ops uses `src/proxy.ts`, because Next 16 renamed `middleware.ts`. The M1 pages are `markets/`, `slots/`, `catalog/`, `delivery-area/`, `settings/` and `users/`.
+
 Package manager: **pnpm** workspaces. Set `node-linker=hoisted` in `.npmrc` so Metro resolves cleanly.
 
 ### 4.2 Key libraries (pin to the latest stable when scaffolding)
