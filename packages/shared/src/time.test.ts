@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   bookableDates,
+  formatLagosDay,
+  formatLagosTime,
   formatMinutes,
   lagosAt,
   lagosDate,
@@ -74,5 +76,15 @@ describe("slot templates", () => {
       windowStart: Date.UTC(2026, 9, 3, 12, 0),
       windowEnd: Date.UTC(2026, 9, 3, 14, 0),
     });
+  });
+});
+
+describe("display", () => {
+  const now = Date.UTC(2026, 9, 3, 7, 0); // Sat 08:00 WAT
+  it("formats Lagos times and days", () => {
+    expect(formatLagosTime(Date.UTC(2026, 9, 3, 12, 0))).toBe("13:00");
+    expect(formatLagosDay("2026-10-03", now)).toBe("Today");
+    expect(formatLagosDay("2026-10-04", now)).toBe("Tomorrow");
+    expect(formatLagosDay("2026-10-05", now)).toBe("Mon 5 Oct");
   });
 });

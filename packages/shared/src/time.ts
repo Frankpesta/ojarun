@@ -89,3 +89,20 @@ export function bookableDates(now: number, daysAhead: number): string[] {
   const today = lagosDate(now);
   return Array.from({ length: daysAhead + 1 }, (_, i) => addDays(today, i));
 }
+
+/** "13:00" for an instant, in Lagos time. */
+export function formatLagosTime(ms: number): string {
+  return new Date(ms + LAGOS_OFFSET_MS).toISOString().slice(11, 16);
+}
+
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "Today", "Tomorrow" or "Mon 5 Oct" for a Lagos date. Without Intl, so Hermes and Node agree. */
+export function formatLagosDay(date: string, now: number): string {
+  const today = lagosDate(now);
+  if (date === today) return "Today";
+  if (date === addDays(today, 1)) return "Tomorrow";
+  const [, mo, d] = parseDate(date);
+  return `${DAYS[lagosDayOfWeek(date)]} ${d} ${MONTHS[mo - 1]}`;
+}
