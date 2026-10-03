@@ -1,8 +1,9 @@
 import "@/lib/interop";
+import { identify, resetIdentity, trackScreen, wrapRoot } from "@/lib/telemetry";
 import "../global.css";
 
 import { useEffect, type ReactNode } from "react";
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -23,6 +24,7 @@ import {
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 import { ToastProvider } from "@/components";
 import { config, isConfigured } from "@/lib/config";
+import { useMe } from "@/features/auth/useSession";
 
 void SplashScreen.preventAutoHideAsync();
 SplashScreen.setOptions({ duration: 200, fade: true });
@@ -34,10 +36,28 @@ function AuthProviders({ children }: { children: ReactNode }) {
   return (
     <ClerkProvider publishableKey={config.clerkPublishableKey} tokenCache={tokenCache}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+        <IdentitySync />
         {children}
       </ConvexProviderWithClerk>
     </ClerkProvider>
   );
+}
+
+/** Keeps Sentry and PostHog pointed at the signed-in user, and clears them on sign-out. */
+function IdentitySync() {
+  const { isSignedIn } = useAuth();
+  const me = useMe();
+  useEffect(() => {
+    if (me) identify(me);
+    else if (isSignedIn === false) resetIdentity();
+  }, [me?._id, me?.role, isSignedIn]);
+  return null;
+}
+
+function ScreenTracker() {
+  const pathname = usePathname();
+  useEffect(() => trackScreen(pathname), [pathname]);
+  return null;
 }
 
 function ThemedStack() {
@@ -45,6 +65,7 @@ function ThemedStack() {
   return (
     <>
       <StatusBar style={name === "dark" ? "light" : "dark"} />
+      <ScreenTracker />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -60,7 +81,7 @@ function ThemedStack() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
@@ -92,3 +113,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrapRoot(RootLayout);

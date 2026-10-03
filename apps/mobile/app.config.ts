@@ -32,6 +32,11 @@ const config: ExpoConfig = {
     "expo-secure-store",
     "expo-web-browser",
     [
+      // Source maps upload on EAS when SENTRY_AUTH_TOKEN is set as an EAS secret.
+      "@sentry/react-native/expo",
+      { organization: process.env.SENTRY_ORG, project: process.env.SENTRY_PROJECT ?? "ojarun-mobile" },
+    ],
+    [
       "expo-splash-screen",
       {
         backgroundColor: "#FAFAF7",

@@ -3,6 +3,7 @@ packages:
   - "packages/*"
 nodeLinker: hoisted
 allowBuilds:
+  '@sentry/cli': true
   browser-tabs-lock: false
   core-js: false
   esbuild: true
