@@ -6,7 +6,7 @@ import { Chip } from "./Chip";
 
 const DEFAULT_QUICK: Kobo[] = [1_000_00, 2_000_00, 3_000_00, 5_000_00];
 
-export type MoneyInputProps = Omit<InputProps, "value" | "onChangeText" | "keyboardType" | "large" | "leading"> & {
+export type MoneyInputProps = Omit<InputProps, "value" | "onChange" | "onChangeText" | "keyboardType" | "large" | "leading"> & {
   /** Integer kobo, or null when empty. */
   value: Kobo | null;
   onChange: (kobo: Kobo | null) => void;
