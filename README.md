@@ -43,6 +43,8 @@ After the first ops person has signed in on the app once, make them an admin:
 
 ```sh
 npx convex run admin:bootstrapOps '{"phone":"0803 123 4567"}'
+# No Nigerian phone on the account (e.g. email sign-in)? Use its Clerk user id:
+npx convex run admin:bootstrapOps '{"clerkId":"user_..."}'
 ```
 
 ## Auth (Clerk)
