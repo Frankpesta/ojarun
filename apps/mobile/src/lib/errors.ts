@@ -15,12 +15,14 @@ const SERVER_COPY: Record<string, string> = {
 };
 
 const CLERK_COPY: Record<string, string> = {
-  form_code_incorrect: "That code isn't right. Check the SMS and try again.",
+  form_code_incorrect: "That code isn't right. Check the email and try again.",
   verification_expired: "That code has expired. We can send you a new one.",
   verification_failed: "Too many wrong codes. Wait a minute, then request a new code.",
   too_many_requests: "Too many attempts. Wait a minute and try again.",
-  form_param_format_invalid: "That phone number doesn't look right.",
-  form_identifier_exists: "That number already has an account. Sign in instead.",
+  form_param_format_invalid: "That email address doesn't look right.",
+  form_identifier_exists: "That email already has an account. Sign in instead.",
+  /** Our own code (useEmailAuth): Clerk wants more sign-up fields than the email. */
+  sign_up_incomplete: "We couldn't finish creating your account. Please try again later.",
 };
 
 export function clerkErrorCode(error: unknown): string | undefined {
@@ -38,5 +40,7 @@ export function friendlyError(error: unknown, fallback = "Something didn't work.
   }
   const clerkCode = clerkErrorCode(error);
   if (clerkCode && CLERK_COPY[clerkCode]) return CLERK_COPY[clerkCode]!;
+  // Unmapped errors show the fallback to users; log the real one so it can be mapped.
+  if (__DEV__) console.warn("[friendlyError] unmapped error", clerkCode ?? "", error);
   return fallback;
 }

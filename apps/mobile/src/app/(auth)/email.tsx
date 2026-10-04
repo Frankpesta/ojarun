@@ -68,8 +68,6 @@ export default function EmailScreen() {
             autoComplete="email"
             textContentType="emailAddress"
             autoFocus
-            returnKeyType="send"
-            onSubmitEditing={submit}
             error={error}
           />
           <Button label="Send code" onPress={submit} loading={sending} disabled={!email} />

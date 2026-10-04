@@ -15,7 +15,7 @@ export type OtpInputProps = {
 };
 
 /**
- * Six boxes over one hidden field, so SMS autofill and paste work.
+ * Six boxes over one hidden field, so one-time-code autofill and paste work.
  * Shakes once when `error` turns on.
  */
 export const OtpInput = forwardRef<TextInput, OtpInputProps>(function OtpInput(
@@ -42,7 +42,10 @@ export const OtpInput = forwardRef<TextInput, OtpInputProps>(function OtpInput(
 
   return (
     <Pressable scale={false} onPress={() => inputRef.current?.focus()} accessible={false}>
-      <Animated.View style={style} className="flex-row justify-between gap-2">
+      {/* Shake and layout live on separate views: NativeWind drops className on a view that also
+          gets an animated style, which stacked the boxes vertically. */}
+      <Animated.View style={style}>
+        <View className="flex-row justify-between gap-2">
         {Array.from({ length }, (_, i) => {
           const char = value[i] ?? "";
           const active = focused && (i === value.length || (i === length - 1 && value.length === length));
@@ -59,6 +62,7 @@ export const OtpInput = forwardRef<TextInput, OtpInputProps>(function OtpInput(
             </View>
           );
         })}
+        </View>
       </Animated.View>
       <TextInput
         ref={(r) => {
@@ -78,10 +82,10 @@ export const OtpInput = forwardRef<TextInput, OtpInputProps>(function OtpInput(
         keyboardType="number-pad"
         inputMode="numeric"
         textContentType="oneTimeCode"
-        autoComplete="sms-otp"
+        autoComplete="one-time-code"
         maxLength={length}
         accessibilityLabel="Verification code"
-        accessibilityHint={`Enter the ${length}-digit code from the SMS`}
+        accessibilityHint={`Enter the ${length}-digit code we emailed you`}
         caretHidden
         className="absolute inset-0 opacity-0"
       />

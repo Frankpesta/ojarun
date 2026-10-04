@@ -28,7 +28,8 @@ export default function VerifyScreen() {
     return () => clearTimeout(t);
   }, [wait]);
 
-  const submit = async (value = code) => {
+  const submit = async () => {
+    const value = code;
     if (value.length !== 6 || verifying) return;
     setVerifying(true);
     setError(null);
@@ -89,7 +90,6 @@ export default function VerifyScreen() {
               setCode(c);
               if (error) setError(null);
             }}
-            onComplete={(c) => void submit(c)}
             error={!!error}
             autoFocus
           />

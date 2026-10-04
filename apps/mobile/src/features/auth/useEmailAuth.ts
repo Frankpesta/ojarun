@@ -49,6 +49,11 @@ export function useEmailAuth() {
       }
       const v = await signUp.verifications.verifyEmailCode({ code });
       if (v.error) return { error: v.error };
+      // The code was right, but Clerk wants more (e.g. a password is required in the dashboard).
+      if (signUp.status !== "complete") {
+        if (__DEV__) console.warn("[auth] sign-up incomplete; missing:", signUp.missingFields);
+        return { error: { code: "sign_up_incomplete" } };
+      }
       const f = await signUp.finalize();
       return f.error ? { error: f.error } : null;
     },

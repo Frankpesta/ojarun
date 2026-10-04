@@ -61,7 +61,6 @@ export default function ProfileSetupScreen() {
             textContentType="name"
             autoCapitalize="words"
             autoFocus={!name}
-            returnKeyType="next"
           />
           <Input
             label="Phone number"
@@ -75,8 +74,6 @@ export default function ProfileSetupScreen() {
             inputMode="tel"
             autoComplete="tel"
             textContentType="telephoneNumber"
-            returnKeyType="done"
-            onSubmitEditing={submit}
             error={phoneError}
             leading={
               <View className="flex-row items-center gap-2 pr-1">
