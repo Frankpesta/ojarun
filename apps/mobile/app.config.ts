@@ -6,6 +6,7 @@ const isProd = APP_ENV === "production";
 const config: ExpoConfig = {
   name: isProd ? "OjaRun" : `OjaRun (${APP_ENV})`,
   slug: "ojarun",
+  owner: "pesta_02",
   scheme: "ojarun",
   version: "0.1.0",
   orientation: "portrait",
@@ -64,7 +65,8 @@ const config: ExpoConfig = {
   },
   extra: {
     appEnv: APP_ENV,
-    eas: { projectId: process.env.EAS_PROJECT_ID },
+    // Not a secret: identifies the project on expo.dev (@pesta_02/ojarun).
+    eas: { projectId: "160f5d57-3dd8-4bb3-b179-a3d97d221620" },
   },
 };
 
