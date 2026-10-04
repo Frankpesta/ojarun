@@ -89,8 +89,7 @@ export function HoldToConfirm({
     >
       {/* Progress fill: a darker layer sweeping left to right, legible on both tones and themes. */}
       <Animated.View
-        className="absolute left-0 top-0 bottom-0"
-        style={[fillStyle, { backgroundColor: "rgba(0,0,0,0.22)" }]}
+        style={[fillStyle, { position: "absolute", left: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.22)" }]}
       />
       <View className="items-center justify-center px-4">
         <Text variant="bodyStrong" tone="onBrand" tabular numberOfLines={1}>

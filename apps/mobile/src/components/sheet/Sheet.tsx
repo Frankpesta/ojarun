@@ -187,53 +187,54 @@ export function Sheet({
 
   const headerStyle = useAnimatedStyle(() => ({ transform: [{ translateX: nudge.value }] }));
 
+  // Animation and className sit on separate views: NativeWind drops className on animated views.
   const header = (
-    <Animated.View style={headerStyle} className="flex-row items-start px-5 pt-1 pb-4 gap-2">
-      {onBack ? (
-        <Pressable
-          onPress={onBack}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          className="-ml-3 items-center justify-center"
-          style={{ width: sizes.minTarget, height: sizes.minTarget, marginTop: -10 }}
-        >
-          <CaretLeft size={22} color={colors.ink} weight="bold" />
-        </Pressable>
-      ) : null}
-      <View className="flex-1">
-        <View ref={titleRef} accessible accessibilityRole="header">
-          <Text variant="heading">{title}</Text>
-        </View>
-        {subtitle ? (
-          <Text variant="small" tone="muted" className="mt-1">
-            {subtitle}
-          </Text>
+    <Animated.View style={headerStyle}>
+      <View className="flex-row items-start px-5 pt-1 pb-4 gap-2">
+        {onBack ? (
+          <Pressable
+            onPress={onBack}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            className="-ml-3 items-center justify-center"
+            style={{ width: sizes.minTarget, height: sizes.minTarget, marginTop: -10 }}
+          >
+            <CaretLeft size={22} color={colors.ink} weight="bold" />
+          </Pressable>
         ) : null}
+        <View className="flex-1">
+          <View ref={titleRef} accessible accessibilityRole="header">
+            <Text variant="heading">{title}</Text>
+          </View>
+          {subtitle ? (
+            <Text variant="small" tone="muted" className="mt-1">
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
       </View>
     </Animated.View>
   );
 
   const discardRow = confirmDiscard ? (
-    <Animated.View
-      entering={FadeIn.duration(150)}
-      exiting={FadeOut.duration(120)}
-      className="mx-5 mb-3 rounded-card bg-error-tint px-4 py-3 gap-3"
-    >
-      <Text variant="smallStrong">Discard your changes?</Text>
-      <View className="flex-row gap-2">
-        <View className="flex-1">
-          <Button label="Keep editing" variant="secondary" size="sm" onPress={() => setConfirmDiscard(false)} />
-        </View>
-        <View className="flex-1">
-          <Button
-            label="Discard"
-            variant="danger"
-            size="sm"
-            onPress={() => {
-              setConfirmDiscard(false);
-              sheet.dismiss();
-            }}
-          />
+    <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(120)}>
+      <View className="mx-5 mb-3 rounded-card bg-error-tint px-4 py-3 gap-3">
+        <Text variant="smallStrong">Discard your changes?</Text>
+        <View className="flex-row gap-2">
+          <View className="flex-1">
+            <Button label="Keep editing" variant="secondary" size="sm" onPress={() => setConfirmDiscard(false)} />
+          </View>
+          <View className="flex-1">
+            <Button
+              label="Discard"
+              variant="danger"
+              size="sm"
+              onPress={() => {
+                setConfirmDiscard(false);
+                sheet.dismiss();
+              }}
+            />
+          </View>
         </View>
       </View>
     </Animated.View>

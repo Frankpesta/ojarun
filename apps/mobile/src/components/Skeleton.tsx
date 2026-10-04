@@ -27,7 +27,12 @@ export function Skeleton({
   }, [reduce, pulse]);
 
   const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
-  return <Animated.View className="bg-surface-sunken" style={[{ width, height, borderRadius: radius }, style]} />;
+  // The pulse and the className live on separate views: NativeWind drops className on animated views.
+  return (
+    <Animated.View style={[{ width, height }, style]}>
+      <View className="flex-1 bg-surface-sunken" style={{ borderRadius: radius }} />
+    </Animated.View>
+  );
 }
 
 /**

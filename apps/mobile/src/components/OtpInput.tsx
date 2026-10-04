@@ -46,22 +46,22 @@ export const OtpInput = forwardRef<TextInput, OtpInputProps>(function OtpInput(
           gets an animated style, which stacked the boxes vertically. */}
       <Animated.View style={style}>
         <View className="flex-row justify-between gap-2">
-        {Array.from({ length }, (_, i) => {
-          const char = value[i] ?? "";
-          const active = focused && (i === value.length || (i === length - 1 && value.length === length));
-          const borderColor = error ? colors.error : active ? colors.brand : colors.lineStrong;
-          return (
-            <View
-              key={i}
-              className="flex-1 items-center justify-center rounded-input bg-surface"
-              style={{ height: 60, borderWidth: active || error ? 2 : 1, borderColor }}
-            >
-              <Text variant="title" tabular>
-                {char}
-              </Text>
-            </View>
-          );
-        })}
+          {Array.from({ length }, (_, i) => {
+            const char = value[i] ?? "";
+            const active = focused && (i === value.length || (i === length - 1 && value.length === length));
+            const borderColor = error ? colors.error : active ? colors.brand : colors.lineStrong;
+            return (
+              <View
+                key={i}
+                className="flex-1 items-center justify-center rounded-input bg-surface"
+                style={{ height: 60, borderWidth: active || error ? 2 : 1, borderColor }}
+              >
+                <Text variant="title" tabular>
+                  {char}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       </Animated.View>
       <TextInput
