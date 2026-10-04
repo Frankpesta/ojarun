@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
@@ -47,6 +47,84 @@ function OpsGate({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+const WAT = new Intl.DateTimeFormat("en-NG", {
+  timeZone: "Africa/Lagos",
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+/** Live Lagos time. Rendered after mount so server and client markup match. */
+function WatClock() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <time className="tabular-nums" dateTime={now?.toISOString()}>
+      {now ? `${WAT.format(now)} WAT` : " "}
+    </time>
+  );
+}
+
+function TopBar({ section }: { section?: string }) {
+  const { isAuthenticated } = useConvexAuth();
+  const me = useQuery(api.users.me, isAuthenticated ? {} : "skip");
+  return (
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-6 border-b border-line bg-bg/85 px-8 backdrop-blur">
+      <p className="flex items-center gap-2 text-small">
+        <span className="text-ink-faint">Ops</span>
+        {section ? (
+          <>
+            <span className="text-line-strong" aria-hidden>
+              /
+            </span>
+            <span className="font-medium text-ink">{section}</span>
+          </>
+        ) : null}
+      </p>
+      <div className="flex items-center gap-5">
+        <span className="hidden text-small text-ink-muted sm:inline">
+          <WatClock />
+        </span>
+        <span className="h-6 w-px bg-line" aria-hidden />
+        <div className="flex items-center gap-3">
+          {me ? (
+            <div className="hidden text-right leading-tight md:block">
+              <p className="text-small font-medium">{me.name ?? "Signed in"}</p>
+              <p className="text-caption capitalize text-ink-faint">{me.role}</p>
+            </div>
+          ) : null}
+          <UserButton />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/** Deployment name from the Convex URL, so it's obvious which backend this dashboard writes to. */
+const DEPLOYMENT = process.env.NEXT_PUBLIC_CONVEX_URL?.match(/^https:\/\/([^.]+)\.convex\.cloud/)?.[1] ?? "local";
+
+function Footer() {
+  return (
+    <footer className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-line px-8 py-4 text-caption text-ink-faint">
+      <p>© {new Date().getFullYear()} OjaRun · Akure</p>
+      <p className="flex items-center gap-4">
+        <span>All times in WAT (UTC+1)</span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-brand" aria-hidden />
+          Backend <span className="font-mono text-ink-muted">{DEPLOYMENT}</span>
+        </span>
+      </p>
+    </footer>
+  );
+}
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   return (
@@ -75,13 +153,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="mt-auto px-3">
-          <UserButton />
-        </div>
       </aside>
-      <main className="min-w-0 flex-1 px-8 py-8">
-        <OpsGate>{children}</OpsGate>
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <TopBar section={NAV.find(({ href }) => pathname.startsWith(href))?.label} />
+        <main className="flex-1 px-8 py-8">
+          <OpsGate>{children}</OpsGate>
+        </main>
+        <Footer />
+      </div>
     </div>
   );
 }
