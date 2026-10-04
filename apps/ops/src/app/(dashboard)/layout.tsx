@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
+import { SignOutButton, UserButton } from "@clerk/nextjs";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import { Basket, CalendarDots, GearSix, MapTrifold, Storefront, UsersThree } from "@phosphor-icons/react";
+import { Basket, CalendarDots, GearSix, MapTrifold, SignOut, Storefront, UsersThree } from "@phosphor-icons/react";
 import { api } from "@ojarun/convex/api";
 import { EmptyState } from "@/components/ui";
 
@@ -153,6 +153,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
+        <div className="mt-auto border-t border-line pt-3">
+          <SignOutButton redirectUrl="/sign-in">
+            <button
+              type="button"
+              className="flex h-10 w-full items-center gap-3 rounded-input px-3 text-small font-medium text-ink-muted transition-colors hover:bg-surface-sunken hover:text-ink"
+            >
+              <SignOut size={18} />
+              Log out
+            </button>
+          </SignOutButton>
+        </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar section={NAV.find(({ href }) => pathname.startsWith(href))?.label} />
