@@ -50,7 +50,8 @@ export const transferStatus = v.union(
 export default defineSchema({
   users: defineTable({
     clerkId: v.string(),
-    phone: v.string(),
+    /** E.164 Nigerian mobile. Collected in profile setup (sign-in is by email), so absent until then. */
+    phone: v.optional(v.string()),
     name: v.optional(v.string()),
     email: v.optional(v.string()),
     role,

@@ -43,7 +43,7 @@
 
 ### Phase 0 — Foundations
 - Turborepo set up with Expo, Next.js, Convex and shared packages
-- Clerk phone OTP; roles on the server
+- Clerk email-code sign-in (phone collected in-app); roles on the server
 - Design tokens and NativeWind config from the brand guidelines
 - Markets, slots, settings and geofence in the database and ops dashboard
 

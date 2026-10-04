@@ -17,7 +17,8 @@ export const list = opsQuery({
     return rows.map((u) => ({
       _id: u._id,
       _creationTime: u._creationTime,
-      phone: u.phone,
+      phone: u.phone ?? null,
+      email: u.email ?? null,
       name: u.name ?? null,
       role: u.role,
       status: u.status,

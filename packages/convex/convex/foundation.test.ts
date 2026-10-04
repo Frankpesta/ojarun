@@ -37,13 +37,34 @@ describe("users", () => {
     expect(await t.query(api.users.me, {})).toBeNull();
   });
 
-  it("validates profile input", async () => {
+  it("creates an email sign-up without a phone and asks for one in profile setup", async () => {
+    const t = setup();
+    const as = t.withIdentity({ subject: "clerk_e", email: "ADE@Example.com", tokenIdentifier: "test|clerk_e" });
+    await as.mutation(api.users.ensureUser, {});
+    expect(await as.query(api.users.me, {})).toMatchObject({ email: "ade@example.com", phone: null, needsProfile: true });
+  });
+
+  it("validates profile input and requires a unique Nigerian phone", async () => {
     const t = setup();
     const { as } = await signIn(t, "clerk_a");
-    await expect(as.mutation(api.users.updateProfile, { name: " " })).rejects.toThrow();
-    await expect(as.mutation(api.users.updateProfile, { name: "Ade", email: "nope" })).rejects.toThrow();
-    await as.mutation(api.users.updateProfile, { name: "  Adebayo Ojo ", email: "ADE@example.com" });
-    expect(await as.query(api.users.me, {})).toMatchObject({ name: "Adebayo Ojo", email: "ade@example.com" });
+    const other = t.withIdentity({ subject: "clerk_b", email: "b@example.com", tokenIdentifier: "test|clerk_b" });
+    await other.mutation(api.users.ensureUser, {});
+
+    await expect(as.mutation(api.users.updateProfile, { name: " ", phone: "08031234567" })).rejects.toThrow();
+    await expect(other.mutation(api.users.updateProfile, { name: "Bola", phone: "+18155550100" })).rejects.toThrow(
+      /Nigerian/,
+    );
+    // clerk_a already holds +2348031234567.
+    await expect(other.mutation(api.users.updateProfile, { name: "Bola", phone: "0803 123 4567" })).rejects.toThrow(
+      /another/,
+    );
+
+    await other.mutation(api.users.updateProfile, { name: "  Bola Ade ", phone: "0805 555 0100" });
+    expect(await other.query(api.users.me, {})).toMatchObject({
+      name: "Bola Ade",
+      phone: "+2348055550100",
+      needsProfile: false,
+    });
   });
 });
 

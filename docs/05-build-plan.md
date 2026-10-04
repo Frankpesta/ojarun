@@ -645,14 +645,14 @@ Each milestone ends with a **demo script**. The milestone is done when the demo 
 - NativeWind wired to **semantic tokens as CSS variables** for light and dark (§7.3), moved into `packages/ui/tokens.ts`. The brand scale is named `brand` so Tailwind's default greens stay available (doc 03 §4 note). Theme preference is persisted in MMKV and applied before first paint. The dark-palette additions are contrast-checked.
 - Plus Jakarta Sans (400/500/600/700) loaded behind the splash screen. Type tokens from §7.2; `tnum` verified.
 - Figma file: variables (light/dark), core components, and M1–M2 screens with all states.
-- Clerk phone OTP (mobile) + Clerk (ops). `ConvexProviderWithClerk` in both apps. `ensureUser`. Role router at `app/index.tsx`.
+- Clerk email code (mobile; phone collected in profile setup) + Clerk (ops). `ConvexProviderWithClerk` in both apps. `ensureUser`. Role router at `app/index.tsx`.
 - Auth wrappers, `stateMachine`, money helpers, shared Zod schemas, `convex-test` harness, CI pipeline.
 - Sentry + PostHog initialised. EAS project with `development` and `preview` profiles.
 - **`<Sheet>` primitive** with all four variants, step navigation, hold-to-confirm, Android back handling and keyboard handling (§7.1), plus a bottom snackbar `Toast` with Undo.
 - Primitives in `src/components`: `Button` (pressed scale + haptic), `Input`, `MoneyInput` (₦, kobo-safe, quick chips), `Chip`, `ListItem`, `StatusPill`, `Skeleton`, `EmptyState`, `OfflineBanner`, `Photo` (expo-image + thumbhash).
 - Dev-only `/(dev)/ui` kitchen sink route covering every primitive in both themes.
 
-**Demo:** kitchen sink reviewed in light and dark against Figma; every sheet variant opens, steps, dismisses and responds to the back button on the reference phone. Sign up with a real Nigerian number → lands on the customer home. Ops sets a user to shopper in the Convex dashboard → that user relaunches the app and lands on shopper home. A shopper calling a customer-only mutation is rejected (shown by a test).
+**Demo:** kitchen sink reviewed in light and dark against Figma; every sheet variant opens, steps, dismisses and responds to the back button on the reference phone. Sign up with email, add a Nigerian number in profile setup → lands on the customer home. Ops sets a user to shopper in the Convex dashboard → that user relaunches the app and lands on shopper home. A shopper calling a customer-only mutation is rejected (shown by a test).
 
 ### M1 — Reference data and ops settings (weeks 2–3)
 **Tasks**

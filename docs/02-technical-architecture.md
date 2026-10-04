@@ -10,7 +10,7 @@
 | Backend / DB / realtime | **Convex** (queries, mutations, actions, HTTP actions, scheduled functions, crons, file storage) |
 | Ops dashboard | **Next.js** web app on the same Convex backend |
 | Monorepo | **Turborepo** |
-| Auth | **Clerk**, phone OTP |
+| Auth | **Clerk**, email code (Clerk cannot send SMS to Nigerian numbers; phone collected in-app) |
 | Payments | **Paystack** — checkout, webhooks, Transfers, account resolution |
 | Maps | **Google Maps Platform** — Places autocomplete, Routes API, react-native-maps |
 | Push | Expo push notifications |
@@ -46,7 +46,7 @@ packages/
 
 ## 4. Auth
 
-- Clerk with phone OTP, integrated with Convex through Clerk's JWT template.
+- Clerk with email-code sign-in, integrated with Convex through Clerk's JWT template. The phone number is collected in profile setup and stored on our `users` row (unverified for now).
 - **Before committing:** confirm Clerk's SMS deliverability and pricing for Nigerian numbers. Termii stays available for transactional SMS either way.
 
 ## 5. Payments (Paystack)

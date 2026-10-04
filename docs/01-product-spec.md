@@ -26,13 +26,13 @@ A **price guide** (built from what shoppers actually pay) can show customers rou
 
 | Role | Who | How they get access |
 |---|---|---|
-| Customer | Members of the public in Akure | Self sign-up with phone OTP |
+| Customer | Members of the public in Akure | Self sign-up with email code; phone number added in profile setup |
 | Shopper | Employed staff, using their own phones | Created or approved by ops in the dashboard — never self-selected |
 | Ops / Admin | Internal staff | Web dashboard, role assigned internally |
 
 ## 5. Customer journey
 
-1. **Sign up / log in** with phone number and OTP.
+1. **Sign up / log in** with email and a one-time code, then add name and phone number.
 2. **Set delivery address**: Places autocomplete, a draggable map pin, and a "landmark / directions" notes field (Akure addresses often rely on landmarks).
 3. **Choose a market.** The delivery fee depends on the distance from that market to the address, so closer markets are visibly cheaper.
 4. **Build the list.** For each item:
@@ -53,7 +53,7 @@ A **price guide** (built from what shoppers actually pay) can show customers rou
 
 ## 6. Shopper journey
 
-1. Log in (phone OTP); the shopper role routes to shopper screens.
+1. Log in (email code); the shopper role routes to shopper screens.
 2. Receive assigned orders, batched by **market + slot**.
 3. Travel to the market and tap **Start shopping** for each order. This locks cancellation for those orders.
 4. For each item:
@@ -147,7 +147,7 @@ Any extra amount the customer approves is charged from their wallet balance. *Ho
 ## 16. Screens by role
 
 **Customer**
-- Onboarding, phone OTP
+- Onboarding, email code sign-in
 - Address book with pin and landmark notes
 - Market picker, showing a delivery fee estimate for each market
 - List builder (items, budgets, preferences), plus a price guide hint

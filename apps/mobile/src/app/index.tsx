@@ -25,7 +25,7 @@ function SessionGate() {
       // The splash screen stays up until we know where to go.
       return <View className="flex-1 bg-bg" />;
     case "signedOut":
-      return <Redirect href="/phone" />;
+      return <Redirect href="/email" />;
     case "error":
       return (
         <Screen>

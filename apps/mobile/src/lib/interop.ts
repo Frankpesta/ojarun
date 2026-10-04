@@ -1,4 +1,5 @@
 import Animated from "react-native-reanimated";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { cssInterop } from "nativewind";
 
 /**
@@ -8,3 +9,4 @@ import { cssInterop } from "nativewind";
 cssInterop(Animated.View, { className: "style" });
 cssInterop(Animated.Text, { className: "style" });
 cssInterop(Animated.ScrollView, { className: "style", contentContainerClassName: "contentContainerStyle" });
+cssInterop(KeyboardAwareScrollView, { className: "style", contentContainerClassName: "contentContainerStyle" });

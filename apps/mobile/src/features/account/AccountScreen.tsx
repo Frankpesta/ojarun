@@ -36,7 +36,7 @@ export function AccountScreen({ audience }: { audience: "customer" | "shopper" }
             {me?.name ?? " "}
           </Text>
           <Text variant="small" tone="muted" tabular>
-            {me ? formatNigerianPhone(me.phone) : " "}
+            {me ? (me.phone ? formatNigerianPhone(me.phone) : (me.email ?? " ")) : " "}
           </Text>
           {audience === "shopper" ? (
             <Text variant="caption" tone="brand" className="mt-1">

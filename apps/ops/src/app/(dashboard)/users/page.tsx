@@ -64,6 +64,7 @@ export default function UsersPage() {
                 <tr key={u._id} className="hover:bg-surface-sunken/60">
                   <td className="px-4 py-3">
                     <span className="font-medium">{u.name ?? "No name yet"}</span>
+                    {u.email ? <span className="block text-small text-ink-muted">{u.email}</span> : null}
                     {u.status !== "active" ? (
                       <span className="ml-2">
                         <Pill tone="error">{u.status}</Pill>
@@ -116,7 +117,7 @@ function RoleDrawer({ user, onClose }: { user: Row; onClose: () => void }) {
     <Drawer
       open
       onOpenChange={(o) => !o && onClose()}
-      title={`Change role for ${user.name ?? formatNigerianPhone(user.phone)}`}
+      title={`Change role for ${user.name ?? user.email ?? (user.phone ? formatNigerianPhone(user.phone) : "this user")}`}
       description="Shoppers see assigned batches and can pay traders. Ops can change anything here."
       footer={
         <>

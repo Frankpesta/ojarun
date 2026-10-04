@@ -38,7 +38,7 @@
 - Turborepo monorepo: Expo (React Native) app + Next.js ops dashboard + shared Convex backend
 - Expo dev builds, Expo Router, NativeWind, Zustand (+ MMKV persistence)
 - One app with role-based screens (customer / shopper); roles assigned server-side only
-- Clerk phone OTP
+- Clerk email-code sign-in (phone collected in profile setup)
 - Paystack: checkout, webhooks, Transfers (traders + withdrawals), account resolution
 - Google Maps Platform: Places autocomplete, Routes API (cached), react-native-maps
 - Status-only tracking (no live map); no background location
