@@ -1,15 +1,14 @@
 import { Tabs } from "expo-router/js-tabs";
 import { House, Receipt, User, Wallet } from "phosphor-react-native";
-import { tabScreenOptions } from "@/components/TabBar";
+import { FloatingTabBar, tabScreenOptions } from "@/components/TabBar";
 import { RoleGuard } from "@/features/auth/RoleGuard";
-import { haptic } from "@/lib/haptics";
 import { useTheme } from "@/theme/ThemeProvider";
 
 export default function CustomerLayout() {
   const { colors } = useTheme();
   return (
     <RoleGuard role="customer">
-      <Tabs screenOptions={tabScreenOptions(colors)} screenListeners={{ tabPress: () => haptic.select() }}>
+      <Tabs screenOptions={tabScreenOptions(colors)} tabBar={(props) => <FloatingTabBar {...props} />}>
         <Tabs.Screen
           name="home"
           options={{

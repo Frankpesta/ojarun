@@ -1,17 +1,30 @@
 import { Text as RNText, type TextProps as RNTextProps } from "react-native";
 import type { TypeToken } from "@ojarun/ui";
 
-export type Tone = "ink" | "muted" | "faint" | "brand" | "accent" | "error" | "onBrand" | "onAccent" | "inherit";
+export type Tone =
+  | "ink"
+  | "muted"
+  | "faint"
+  | "brand"
+  | "accent"
+  | "error"
+  | "onBrand"
+  | "onAccent"
+  | "onForest"
+  | "forestMuted"
+  | "live"
+  | "warningInk"
+  | "inherit";
 
 const VARIANT: Record<TypeToken, string> = {
-  display: "text-display font-bold",
-  title: "text-title font-semibold",
-  heading: "text-heading font-semibold",
+  display: "text-display font-extrabold",
+  title: "text-title font-extrabold",
+  heading: "text-heading font-extrabold",
   body: "text-body font-regular",
-  bodyStrong: "text-body font-semibold",
+  bodyStrong: "text-body font-bold",
   small: "text-small font-regular",
-  smallStrong: "text-small font-medium",
-  caption: "text-caption font-medium",
+  smallStrong: "text-small font-bold",
+  caption: "text-caption font-semibold",
 };
 
 const TONE: Record<Tone, string> = {
@@ -23,6 +36,10 @@ const TONE: Record<Tone, string> = {
   error: "text-error",
   onBrand: "text-on-brand",
   onAccent: "text-on-accent",
+  onForest: "text-on-forest",
+  forestMuted: "text-forest-muted",
+  live: "text-live",
+  warningInk: "text-warning-ink",
   inherit: "",
 };
 

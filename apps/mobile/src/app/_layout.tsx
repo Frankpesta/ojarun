@@ -19,15 +19,18 @@ import {
   PlusJakartaSans_500Medium,
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
   useFonts,
 } from "@expo-google-fonts/plus-jakarta-sans";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 import { ToastProvider } from "@/components";
 import { config, isConfigured } from "@/lib/config";
 import { useMe } from "@/features/auth/useSession";
+import { AnimatedSplash, useSplash } from "@/features/splash/AnimatedSplash";
 
 void SplashScreen.preventAutoHideAsync();
-SplashScreen.setOptions({ duration: 200, fade: true });
+// AnimatedSplash draws the same frame underneath, so the native splash can drop instantly.
+SplashScreen.setOptions({ duration: 0, fade: false });
 
 const convex = isConfigured ? new ConvexReactClient(config.convexUrl, { unsavedChangesWarning: false }) : null;
 
@@ -87,10 +90,11 @@ function RootLayout() {
     PlusJakartaSans_500Medium,
     PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
   });
 
   useEffect(() => {
-    if (fontsLoaded && !isConfigured) void SplashScreen.hideAsync();
+    if (fontsLoaded && !isConfigured) useSplash.getState().markReady();
   }, [fontsLoaded]);
 
   if (!fontsLoaded) return null;
@@ -107,6 +111,7 @@ function RootLayout() {
                 </BottomSheetModalProvider>
               </ToastProvider>
             </AuthProviders>
+            <AnimatedSplash />
           </ThemeProvider>
         </SafeAreaProvider>
       </KeyboardProvider>

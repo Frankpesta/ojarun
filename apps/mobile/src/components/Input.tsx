@@ -30,12 +30,12 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
 
   return (
     <View className="gap-2">
-      <Text variant="smallStrong" tone="muted" nativeID={`${label}-label`}>
+      <Text variant="smallStrong" nativeID={`${label}-label`}>
         {label}
       </Text>
       <View
         className={`flex-row items-center rounded-input bg-surface px-4 ${editable ? "" : "opacity-60"}`}
-        style={{ minHeight: large ? 60 : 52, borderWidth: focused || error ? 2 : 1, borderColor: border }}
+        style={{ minHeight: large ? 60 : 56, borderWidth: focused || error ? 2 : 1.5, borderColor: border }}
       >
         {leading ? <View className="mr-2">{leading}</View> : null}
         <Field
@@ -58,7 +58,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
             flex: 1,
             color: colors.ink,
             fontFamily: large ? fontFamily.semibold : fontFamily.regular,
-            fontSize: large ? 22 : 16,
+            fontSize: large ? 22 : 17,
             fontVariant: large ? ["tabular-nums"] : undefined,
             paddingVertical: 12,
           }}

@@ -13,5 +13,7 @@ export * from "./EmptyState";
 export * from "./OfflineBanner";
 export * from "./Screen";
 export * from "./Card";
+export * from "./Sticker";
+export * from "./TabBar";
 export * from "./Toast";
 export * from "./sheet/Sheet";

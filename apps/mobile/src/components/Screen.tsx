@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 import { Text } from "./Text";
+import { useTabBarSpace } from "./TabBar";
 
 export type ScreenProps = {
   title?: string;
@@ -13,12 +14,16 @@ export type ScreenProps = {
   footer?: ReactNode;
   scroll?: boolean;
   edges?: Edge[];
+  /** A tab root: leave room at the bottom for the floating tab bar. */
+  tabs?: boolean;
 };
 
 /** Standard screen: safe area, 20 px gutters, left-aligned large title (05 §7.2). */
-export function Screen({ title, subtitle, headerRight, children, footer, scroll = true, edges = ["top"] }: ScreenProps) {
+export function Screen({ title, subtitle, headerRight, children, footer, scroll = true, edges = ["top"], tabs }: ScreenProps) {
+  const tabSpace = useTabBarSpace();
+  const bottom = tabs ? tabSpace : 32;
   const header = title ? (
-    <View className="flex-row items-start justify-between gap-4 pt-4 pb-5">
+    <View className="flex-row items-start justify-between gap-4 pt-5 pb-5">
       <View className="flex-1">
         <Text variant="title" accessibilityRole="header">
           {title}
@@ -38,7 +43,8 @@ export function Screen({ title, subtitle, headerRight, children, footer, scroll 
       {scroll ? (
         <ScrollView
           className="flex-1"
-          contentContainerClassName="px-gutter pb-8"
+          contentContainerClassName="px-gutter"
+          contentContainerStyle={{ paddingBottom: bottom }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -46,7 +52,7 @@ export function Screen({ title, subtitle, headerRight, children, footer, scroll 
           {children}
         </ScrollView>
       ) : (
-        <View className="flex-1 px-gutter">
+        <View className="flex-1 px-gutter" style={{ paddingBottom: tabs ? tabSpace : 0 }}>
           {header}
           {children}
         </View>

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { View } from "react-native";
 import { Redirect } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
+import { useSplash } from "@/features/splash/AnimatedSplash";
 import { isConfigured } from "@/lib/config";
 import { useSession } from "@/features/auth/useSession";
 import { Button, EmptyState, Screen } from "@/components";
@@ -17,12 +17,12 @@ function SessionGate() {
   const session = useSession();
 
   useEffect(() => {
-    if (session.status !== "loading") void SplashScreen.hideAsync();
+    if (session.status !== "loading") useSplash.getState().markReady();
   }, [session.status]);
 
   switch (session.status) {
     case "loading":
-      // The splash screen stays up until we know where to go.
+      // The animated splash stays up until we know where to go.
       return <View className="flex-1 bg-bg" />;
     case "signedOut":
       return <Redirect href="/email" />;

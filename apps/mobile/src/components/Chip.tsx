@@ -25,17 +25,17 @@ export function Chip({ label, selected, onPress, disabled }: ChipProps) {
         haptic.select();
         onPress?.();
       }}
-      className={`flex-row items-center gap-1.5 rounded-chip px-3.5 ${
+      className={`flex-row items-center gap-1.5 rounded-full px-4 ${
         selected ? "bg-brand-tint" : "bg-surface"
       } ${disabled ? "opacity-40" : ""}`}
-      style={{ minHeight: 40, borderWidth: selected ? 1.5 : 1, borderColor: selected ? colors.brand : colors.lineStrong }}
+      style={{ minHeight: 40, borderWidth: 1.5, borderColor: selected ? colors.brand : colors.lineStrong }}
     >
       {selected ? (
         <View>
           <Check size={14} color={colors.brand} weight="bold" />
         </View>
       ) : null}
-      <Text variant="smallStrong" tone={selected ? "brand" : "ink"} tabular>
+      <Text variant="smallStrong" tone="inherit" style={{ color: selected ? colors.brandPressed : colors.ink }} tabular>
         {label}
       </Text>
     </Pressable>

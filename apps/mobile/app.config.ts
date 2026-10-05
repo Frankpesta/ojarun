@@ -42,10 +42,12 @@ const config: ExpoConfig = {
     [
       "expo-splash-screen",
       {
-        backgroundColor: "#FAFAF7",
+        // Native frame only: the green basket tile on forest. src/features/splash/AnimatedSplash
+        // takes over from the identical layout and plays the full splash.
+        backgroundColor: "#0B3B22",
         image: "./assets/splash-icon.png",
-        imageWidth: 120,
-        dark: { backgroundColor: "#0C1A12", image: "./assets/splash-icon-dark.png" },
+        imageWidth: 124,
+        dark: { backgroundColor: "#0B3B22", image: "./assets/splash-icon.png" },
       },
     ],
     [
@@ -56,6 +58,7 @@ const config: ExpoConfig = {
           "../../node_modules/@expo-google-fonts/plus-jakarta-sans/500Medium/PlusJakartaSans_500Medium.ttf",
           "../../node_modules/@expo-google-fonts/plus-jakarta-sans/600SemiBold/PlusJakartaSans_600SemiBold.ttf",
           "../../node_modules/@expo-google-fonts/plus-jakarta-sans/700Bold/PlusJakartaSans_700Bold.ttf",
+          "../../node_modules/@expo-google-fonts/plus-jakarta-sans/800ExtraBold/PlusJakartaSans_800ExtraBold.ttf",
         ],
       },
     ],
