@@ -58,4 +58,20 @@ http.route({
   }),
 });
 
+/**
+ * Paystack's callback_url. Sends the payer back into the app, which closes the payment browser
+ * and asks the server to verify. The page itself never trusts the query string.
+ */
+http.route({
+  path: "/pay/return",
+  method: "GET",
+  handler: httpAction(async (_ctx, request) => {
+    const reference = new URL(request.url).searchParams.get("reference") ?? "";
+    const safe = /^[A-Za-z0-9_-]{1,100}$/.test(reference) ? reference : "";
+    const target = `ojarun://pay/return${safe ? `?reference=${safe}` : ""}`;
+    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Back to OjaRun</title><style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F8F5EE;font-family:system-ui,sans-serif;color:#1A1714}main{text-align:center;padding:24px}a{display:inline-block;margin-top:16px;padding:16px 24px;border-radius:16px;background:#15803D;color:#fff;font-weight:700;text-decoration:none}</style></head><body><main><p>Taking you back to OjaRun…</p><a href="${target}">Return to OjaRun</a></main><script>location.replace(${JSON.stringify(target)})</script></body></html>`;
+    return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+  }),
+});
+
 export default http;

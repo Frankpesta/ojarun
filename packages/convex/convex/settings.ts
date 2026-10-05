@@ -12,8 +12,13 @@ export const publicSettings = authedQuery({
     const s = await getSettings(ctx);
     return {
       serviceFeeKobo: s.serviceFeeKobo,
+      paystackFee: s.paystackFee,
       bufferPresets: s.bufferPresets,
       defaultBufferPct: s.defaultBufferPct,
+      bufferRoundToKobo: s.bufferRoundToKobo,
+      paymentHoldMinutes: s.paymentHoldMinutes,
+      maxItemsPerOrder: s.maxItemsPerOrder,
+      genericBudgetChipsKobo: s.genericBudgetChipsKobo,
       minWithdrawalKobo: s.minWithdrawalKobo,
       refundPaystackChargeOnCancel: s.refundPaystackChargeOnCancel,
       priceCheckTimeoutSec: s.priceCheckTimeoutSec,

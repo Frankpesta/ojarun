@@ -1,11 +1,15 @@
 import { useMemo } from "react";
+import type { Id } from "@ojarun/convex/dataModel";
 import { View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "convex/react";
-import { Basket, CaretDown, Clock, MagnifyingGlass, MapPin, Plus, Storefront, Wallet } from "phosphor-react-native";
+import { ArrowRight, Basket, CaretDown, Clock, MagnifyingGlass, MapPin, Plus, Storefront, Wallet } from "phosphor-react-native";
 import { api } from "@ojarun/convex/api";
-import { formatLagosClock, formatLagosDay, formatLagosWindow, formatMinutes, formatNaira, haversineMeters } from "@ojarun/shared";
-import { Button, OfflineBanner, Pressable, Screen, Sticker, Text, stickerFor, useToast } from "@/components";
+import { formatLagosClock, formatLagosDay, formatLagosWindow, formatMinutes, formatNaira, haversineMeters, ORDER_STATUS_LABEL, type OrderStatus } from "@ojarun/shared";
+import { Button, OfflineBanner, Pressable, Screen, Sticker, Text, stickerFor } from "@/components";
+import { CheapestTag, km } from "@/features/list/MarketSheet";
+import { useListDraft } from "@/features/list/useListDraft";
+import { useOrderSetup } from "@/features/list/useOrderSetup";
 import { useMe } from "@/features/auth/useSession";
 import { greeting } from "@/lib/time";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -16,15 +20,12 @@ const MARKET_TINTS = [
   { bg: "bg-warning-tint", ink: "warningInk" },
 ] as const;
 
-/** Lists, checkout and tracking arrive with ordering (M2); until then these entry points say so. */
-function useStartList() {
-  const toast = useToast();
-  return () => toast.show({ message: "Ordering opens in the next update. Your address is ready." });
-}
+const LIVE = ["paid", "assigned", "shopping", "en_route", "arrived"] as const;
 
 export default function CustomerHome() {
   const me = useMe();
-  const startList = useStartList();
+  const orders = useQuery(api.orders.listMine);
+  const live = orders?.find((o) => (LIVE as readonly string[]).includes(o.status));
   const firstName = me?.name?.split(/\s+/)[0];
 
   return (
@@ -38,9 +39,9 @@ export default function CustomerHome() {
             </Text>
             <NextCutoff />
           </View>
-          <StartBar onPress={startList} />
-          <FirstRunCard onStart={startList} />
-          <QuickAdd onAdd={startList} />
+          <StartBar onPress={() => router.push({ pathname: "/list", params: { search: "1" } })} />
+          {live ? <LiveOrderCard order={live} /> : orders?.length === 0 ? <FirstRunCard onStart={() => router.push("/list")} /> : null}
+          <QuickAdd onAdd={(id) => router.push({ pathname: "/list", params: { add: id } })} />
           <Markets />
         </View>
       </Screen>
@@ -201,7 +202,53 @@ function SectionHeader({ title, aside }: { title: string; aside?: string }) {
   );
 }
 
-function QuickAdd({ onAdd }: { onAdd: () => void }) {
+function LiveOrderCard({ order }: { order: { _id: string; code: string; status: OrderStatus; marketName: string; itemNames: string[]; itemCount: number; window: { start: number; end: number; date: string } | null } }) {
+  const { colors } = useTheme();
+  const go = () => router.push({ pathname: "/order/[id]", params: { id: order._id } });
+  return (
+    <Pressable onPress={go} accessibilityRole="button" accessibilityLabel={`Order ${order.code}, ${ORDER_STATUS_LABEL[order.status]}. Track order`} className="gap-3.5 rounded-hero bg-forest p-[18px]">
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-2">
+          <View className="items-center justify-center rounded-full bg-live/20" style={{ width: 16, height: 16 }}>
+            <View className="rounded-full bg-live" style={{ width: 8, height: 8 }} />
+          </View>
+          <Text variant="smallStrong" tone="forestMuted" style={{ fontSize: 13 }}>
+            Live · Order {order.code}
+          </Text>
+        </View>
+        {order.window ? (
+          <Text variant="small" tone="forestMuted" style={{ fontSize: 13 }}>
+            {formatLagosWindow(order.window.start, order.window.end)} {formatLagosDay(order.window.date, Date.now()).toLowerCase()}
+          </Text>
+        ) : null}
+      </View>
+      <View className="gap-1">
+        <Text variant="heading" tone="onForest" style={{ fontSize: 21, lineHeight: 26 }}>
+          {order.status === "paid" || order.status === "assigned" ? `Confirmed for ${order.marketName}` : `${ORDER_STATUS_LABEL[order.status]} · ${order.marketName}`}
+        </Text>
+        <Text variant="small" tone="onForestSoft">
+          {order.itemCount} {order.itemCount === 1 ? "item" : "items"} · we'll tell you when shopping starts
+        </Text>
+      </View>
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row gap-1.5">
+          {order.itemNames.slice(0, 3).map((n, i) => {
+            const kind = stickerFor(n);
+            return kind ? <Sticker key={`${n}-${i}`} kind={kind} size={36} /> : null;
+          })}
+        </View>
+        <View className="h-10 flex-row items-center gap-1.5 rounded-[12px] bg-on-forest px-3.5">
+          <Text variant="smallStrong" tone="inherit" className="text-forest">
+            Track order
+          </Text>
+          <ArrowRight size={16} color={colors.forest} weight="bold" />
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+function QuickAdd({ onAdd }: { onAdd: (id: Id<"catalogItems">) => void }) {
   const { colors } = useTheme();
   const items = useQuery(api.catalog.featured);
   if (!items?.length) return null;
@@ -214,7 +261,7 @@ function QuickAdd({ onAdd }: { onAdd: () => void }) {
           return (
             <Pressable
               key={it._id}
-              onPress={onAdd}
+              onPress={() => onAdd(it._id)}
               accessibilityRole="button"
               accessibilityLabel={`Add ${it.name}`}
               className="gap-1.5"
@@ -249,29 +296,36 @@ function QuickAdd({ onAdd }: { onAdd: () => void }) {
 function Markets() {
   const { colors } = useTheme();
   const markets = useQuery(api.markets.listActive);
-  const addresses = useQuery(api.addresses.list);
-  const home = addresses?.[0];
+  const setMarket = useListDraft((s) => s.setMarket);
+  const { address, quotes } = useOrderSetup();
 
+  // Real delivery fees once quoted; straight-line distance only as a placeholder before that.
   const rows = useMemo(() => {
+    if (quotes) return quotes.map((q) => ({ _id: q.marketId, name: q.name, opensAtMin: q.opensAtMin, closesAtMin: q.closesAtMin, meters: q.distanceMeters, fee: q.deliveryFee as number | null }));
     if (!markets) return [];
-    const withDistance = markets.map((m) => ({ ...m, meters: home ? haversineMeters(home, m) : null }));
-    if (home) withDistance.sort((a, b) => (a.meters ?? 0) - (b.meters ?? 0));
+    const withDistance = markets.map((m) => ({ ...m, meters: address ? haversineMeters(address, m) : null, fee: null as number | null }));
+    if (address) withDistance.sort((a, b) => (a.meters ?? 0) - (b.meters ?? 0));
     return withDistance;
-  }, [markets, home]);
+  }, [markets, quotes, address]);
 
   if (!rows.length) return null;
   return (
     <View className="gap-3">
-      <SectionHeader title={home ? "Markets near you" : "Markets we shop"} aside={home ? "Closer = cheaper delivery" : undefined} />
+      <SectionHeader title={address ? "Markets near you" : "Markets we shop"} aside={address ? "Closer = cheaper delivery" : undefined} />
       <View className="overflow-hidden rounded-card border border-line bg-surface">
         {rows.map((m, i) => {
           const tint = MARKET_TINTS[i % MARKET_TINTS.length]!;
           return (
-            <View
+            <Pressable
               key={m._id}
+              scale={false}
+              onPress={() => {
+                setMarket(m._id);
+                router.push("/list");
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${m.name}${m.meters != null ? `, ${km(m.meters)}` : ""}${m.fee != null ? `, delivery ${formatNaira(m.fee)}` : ""}. Shop here`}
               className={`flex-row items-center gap-3.5 px-4 py-3.5 ${i < rows.length - 1 ? "border-b border-line-soft" : ""}`}
-              accessible
-              accessibilityLabel={`${m.name}${m.meters != null ? `, ${(m.meters / 1000).toFixed(1)} kilometres away` : ""}`}
             >
               <View className={`h-12 w-12 items-center justify-center rounded-[14px] ${tint.bg}`}>
                 <Storefront size={24} color={colors[tint.ink]} />
@@ -281,19 +335,23 @@ function Markets() {
                   <Text variant="bodyStrong" numberOfLines={1} style={{ flexShrink: 1 }}>
                     {m.name}
                   </Text>
-                  {home && i === 0 ? (
-                    <View className="rounded-md bg-brand-tint px-1.5 py-0.5">
-                      <Text variant="caption" tone="inherit" className="uppercase text-brand-pressed" style={{ fontSize: 11, letterSpacing: 0.3 }}>
-                        Closest
-                      </Text>
-                    </View>
-                  ) : null}
+                  {quotes && i === 0 ? <CheapestTag /> : null}
                 </View>
                 <Text variant="small" tone="faint">
-                  {m.meters != null ? `${(m.meters / 1000).toFixed(1)} km · ` : ""}open {formatMinutes(m.opensAtMin)}–{formatMinutes(m.closesAtMin)}
+                  {m.meters != null ? `${km(m.meters)} · ` : ""}open till {formatMinutes(m.closesAtMin)}
                 </Text>
               </View>
-            </View>
+              {m.fee != null ? (
+                <View className="items-end">
+                  <Text variant="bodyStrong" tabular style={{ fontSize: 15 }}>
+                    {formatNaira(m.fee)}
+                  </Text>
+                  <Text variant="caption" tone="faint">
+                    delivery
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
           );
         })}
       </View>

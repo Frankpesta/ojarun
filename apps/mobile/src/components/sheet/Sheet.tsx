@@ -77,6 +77,8 @@ export type SheetProps = {
   onDismiss?: () => void;
   /** Changes when the step changes, so content cross-fades. */
   stepKey?: string | number;
+  /** Beside the title, e.g. the item's sticker. */
+  leading?: ReactNode;
   children: ReactNode;
 };
 
@@ -92,6 +94,7 @@ export function Sheet({
   dirty = false,
   onDismiss,
   stepKey,
+  leading,
   children,
 }: SheetProps) {
   const { colors, name, scrimOpacity } = useTheme();
@@ -202,7 +205,8 @@ export function Sheet({
             <CaretLeft size={22} color={colors.ink} weight="bold" />
           </Pressable>
         ) : null}
-        <View className="flex-1">
+        {leading ? <View className="mr-1.5">{leading}</View> : null}
+        <View className="flex-1 justify-center" style={leading ? { minHeight: 56 } : undefined}>
           <View ref={titleRef} accessible accessibilityRole="header">
             <Text variant="heading">{title}</Text>
           </View>
