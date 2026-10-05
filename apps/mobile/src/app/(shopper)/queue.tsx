@@ -3,7 +3,7 @@ import { EmptyState, Screen } from "@/components";
 
 export default function ShopperQueue() {
   return (
-    <Screen title="Uploads" subtitle="Photos, payments and status updates waiting to send.">
+    <Screen title="Uploads" subtitle="Photos, payments and status updates waiting to send." tabs>
       <EmptyState
         icon={CloudCheck}
         title="Everything's sent"

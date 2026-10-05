@@ -17,7 +17,7 @@ export default function ShopperToday() {
   const firstName = me?.name?.split(/\s+/)[0];
   return (
     <View className="flex-1 bg-bg">
-      <Screen title={firstName ? `Hi, ${firstName}` : "Today"} subtitle={todayLabel()}>
+      <Screen title={firstName ? `Hi, ${firstName}` : "Today"} subtitle={todayLabel()} tabs>
         <EmptyState
           icon={Storefront}
           title="No batches yet"

@@ -13,6 +13,7 @@ import {
   slotInstants,
   slotTemplateProblems,
 } from "./time";
+import { formatLagosClock, formatLagosWindow } from "./time";
 
 describe("Lagos dates", () => {
   it("rolls over at Lagos midnight, not UTC midnight", () => {
@@ -86,5 +87,19 @@ describe("display", () => {
     expect(formatLagosDay("2026-10-03", now)).toBe("Today");
     expect(formatLagosDay("2026-10-04", now)).toBe("Tomorrow");
     expect(formatLagosDay("2026-10-05", now)).toBe("Mon 5 Oct");
+  });
+});
+
+describe("friendly clock formats", () => {
+  const at = (h: number, m = 0) => Date.UTC(2026, 9, 5, h - 1, m); // Lagos = UTC+1
+  it("formats single times", () => {
+    expect(formatLagosClock(at(10))).toBe("10am");
+    expect(formatLagosClock(at(13, 30))).toBe("1:30pm");
+    expect(formatLagosClock(at(12))).toBe("12pm");
+    expect(formatLagosClock(at(0, 5) + 24 * 3600_000)).toBe("12:05am");
+  });
+  it("formats windows", () => {
+    expect(formatLagosWindow(at(13), at(15))).toBe("1–3pm");
+    expect(formatLagosWindow(at(11), at(13))).toBe("11am–1pm");
   });
 });

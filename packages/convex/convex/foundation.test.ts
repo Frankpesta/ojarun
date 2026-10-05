@@ -157,6 +157,19 @@ describe("wallet ledger", () => {
     });
   });
 
+  it("lists the caller's own activity, newest first", async () => {
+    const t = setup();
+    const { as, userId } = await signIn(t, "clerk_a");
+    const { userId: otherId } = await signIn(t, "clerk_b", "+2348055550100");
+    await t.run(async (ctx) => {
+      await postWalletEntry(ctx, { userId, type: "leftover_credit", amount: 1_250_00, dedupeKey: "l:1" });
+      await postWalletEntry(ctx, { userId, type: "checkout_debit", amount: -500_00, dedupeKey: "c:2" });
+      await postWalletEntry(ctx, { userId: otherId, type: "leftover_credit", amount: 900_00, dedupeKey: "l:3" });
+    });
+    const rows = await as.query(api.wallet.activity, {});
+    expect(rows.map((r) => r.amount)).toEqual([-500_00, 1_250_00]);
+  });
+
   it("refuses overdrafts, wrong signs, fractional kobo and unexplained adjustments", async () => {
     const t = setup();
     const { userId } = await signIn(t, "clerk_a");

@@ -28,3 +28,15 @@ export const searchItems = authedQuery({
     }));
   },
 });
+
+/** A few staples for one-tap adding on the home screen, in the order ops created them. */
+export const featured = authedQuery({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("catalogItems").order("asc").take(60);
+    return rows
+      .filter((r) => r.active)
+      .slice(0, 8)
+      .map((r) => ({ _id: r._id, name: r.name, unitHint: r.unitHint ?? null }));
+  },
+});

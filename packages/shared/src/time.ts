@@ -106,3 +106,19 @@ export function formatLagosDay(date: string, now: number): string {
   const [, mo, d] = parseDate(date);
   return `${DAYS[lagosDayOfWeek(date)]} ${d} ${MONTHS[mo - 1]}`;
 }
+
+/** "10am", "1:30pm" in Lagos time: how people in Akure say times. */
+export function formatLagosClock(ms: number): string {
+  const [h, m] = formatLagosTime(ms).split(":").map(Number) as [number, number];
+  const suffix = h < 12 ? "am" : "pm";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${h12}${suffix}` : `${h12}:${String(m).padStart(2, "0")}${suffix}`;
+}
+
+/** "1–3pm", or "11am–1pm" when the window crosses noon. */
+export function formatLagosWindow(startMs: number, endMs: number): string {
+  const a = formatLagosClock(startMs);
+  const b = formatLagosClock(endMs);
+  const sameHalf = a.slice(-2) === b.slice(-2);
+  return `${sameHalf ? a.slice(0, -2) : a}–${b}`;
+}

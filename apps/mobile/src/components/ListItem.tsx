@@ -27,11 +27,11 @@ export function ListItem({ title, subtitle, icon: Icon, trailing, onPress, destr
         </View>
       ) : null}
       <View className="flex-1">
-        <Text variant="body" tone={destructive ? "error" : "ink"} numberOfLines={1}>
+        <Text variant="bodyStrong" tone={destructive ? "error" : "ink"} numberOfLines={1} style={{ fontSize: 15 }}>
           {title}
         </Text>
         {subtitle ? (
-          <Text variant="small" tone="muted" numberOfLines={2}>
+          <Text variant="small" tone="faint" numberOfLines={2}>
             {subtitle}
           </Text>
         ) : null}
