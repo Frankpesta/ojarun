@@ -32,7 +32,7 @@ const ripeness = { group: "Ripeness", options: ["Firm", "Ripe", "Very ripe"] };
 const size = { group: "Size", options: ["Small", "Medium", "Big"] };
 const fresh = { group: "Condition", options: ["Fresh", "Dried"] };
 
-const CATALOG: CatalogRow[] = [
+const ITEMS: CatalogRow[] = [
   { name: "Tomatoes", aliases: ["tomato", "tomatoe"], category: "Vegetables", unitHint: "paint rubber, basket", presetPreferences: [ripeness, { group: "For", options: ["Stew", "Salad"] }] },
   { name: "Tatashe", aliases: ["red bell pepper", "bell pepper"], category: "Peppers", unitHint: "heap", presetPreferences: [size] },
   { name: "Rodo", aliases: ["scotch bonnet", "atarodo", "hot pepper"], category: "Peppers", unitHint: "heap, paint rubber", presetPreferences: [size] },
@@ -66,6 +66,47 @@ const CATALOG: CatalogRow[] = [
   { name: "Ginger", aliases: ["ata ile"], category: "Spices", unitHint: "heap", presetPreferences: [] },
   { name: "Garlic", aliases: ["ayu"], category: "Spices", unitHint: "heap", presetPreferences: [] },
 ];
+
+// ESTIMATED Akure prices in naira (Oct 2026) for the add-item budget chips. Ops refines them.
+const BUDGETS: Record<string, [number, number, number]> = {
+  Tomatoes: [2_000, 3_000, 5_000],
+  Tatashe: [1_000, 2_000, 3_000],
+  Rodo: [500, 1_000, 2_000],
+  Shombo: [500, 1_000, 2_000],
+  Onions: [1_000, 2_000, 3_000],
+  Yam: [3_000, 5_000, 8_000],
+  Plantain: [1_500, 2_500, 4_000],
+  "Irish potatoes": [2_000, 3_000, 5_000],
+  "Sweet potatoes": [1_000, 2_000, 3_000],
+  Rice: [2_500, 5_000, 10_000],
+  Beans: [2_000, 4_000, 8_000],
+  Garri: [1_500, 3_000, 5_000],
+  Elubo: [2_000, 4_000, 6_000],
+  "Palm oil": [2_000, 4_000, 7_000],
+  "Vegetable oil": [2_500, 5_000, 9_000],
+  Ugu: [500, 1_000, 2_000],
+  "Efo tete": [500, 1_000, 2_000],
+  "Efo shoko": [500, 1_000, 2_000],
+  Ewedu: [500, 1_000, 2_000],
+  Okra: [500, 1_000, 2_000],
+  Egusi: [1_500, 3_000, 5_000],
+  Ogbono: [2_000, 3_500, 6_000],
+  Crayfish: [1_500, 3_000, 5_000],
+  Iru: [300, 500, 1_000],
+  Stockfish: [2_000, 4_000, 8_000],
+  Fish: [3_000, 5_000, 8_000],
+  Beef: [3_000, 5_000, 10_000],
+  Ponmo: [1_000, 2_000, 3_000],
+  Chicken: [6_000, 10_000, 15_000],
+  Eggs: [2_500, 5_000, 9_000],
+  Ginger: [500, 1_000, 1_500],
+  Garlic: [500, 1_000, 1_500],
+};
+
+const CATALOG: CatalogRow[] = ITEMS.map((item) => ({
+  ...item,
+  suggestedBudgetsKobo: BUDGETS[item.name]?.map((n) => n * 100),
+}));
 
 export const run = internalMutation({
   args: {},

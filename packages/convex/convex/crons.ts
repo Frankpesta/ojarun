@@ -5,5 +5,6 @@ import { internal } from "./_generated/api";
 const crons = cronJobs();
 
 crons.daily("generate slots", { hourUTC: 23, minuteUTC: 0 }, internal.slots.generateDaily, {});
+crons.interval("expire unpaid orders", { minutes: 5 }, internal.checkout.expireStale, {});
 
 export default crons;

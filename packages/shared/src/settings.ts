@@ -38,6 +38,10 @@ export const settingsSchema = z.object({
   /** Customers can book today plus this many days ahead. */
   bookingDaysAhead: z.number().int().min(0).max(6),
   showPriceGuide: z.boolean(),
+  /** No minimum order; this caps one order so a shopper can finish it inside the window. */
+  maxItemsPerOrder: z.number().int().positive(),
+  /** Budget chips for free-text items and catalogue items without their own suggestions. */
+  genericBudgetChipsKobo: z.array(kobo).min(1).max(4),
   supportWhatsapp: z.string(),
   supportPhone: z.string(),
   /** Akure delivery area as a [lng, lat] ring (GeoJSON order). */
@@ -79,6 +83,8 @@ export const DEFAULT_SETTINGS: Settings = {
   expectedShoppersPerSlot: 2,
   bookingDaysAhead: 1,
   showPriceGuide: false,
+  maxItemsPerOrder: 25,
+  genericBudgetChipsKobo: [1_000_00, 2_000_00, 5_000_00],
   supportWhatsapp: "",
   supportPhone: "",
   geofence: [

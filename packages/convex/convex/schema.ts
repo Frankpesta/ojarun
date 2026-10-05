@@ -109,6 +109,8 @@ export default defineSchema({
     category: v.string(),
     presetPreferences: v.array(v.object({ group: v.string(), options: v.array(v.string()) })),
     unitHint: v.optional(v.string()),
+    /** Up to 3 quick budget chips for the add-item sheet, ascending. Ops-editable. */
+    suggestedBudgetsKobo: v.optional(v.array(kobo)),
     active: v.boolean(),
     /** name + aliases, lower-cased, for the search index. */
     searchText: v.string(),

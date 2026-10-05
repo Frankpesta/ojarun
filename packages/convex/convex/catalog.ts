@@ -25,6 +25,7 @@ export const searchItems = authedQuery({
       category: r.category,
       unitHint: r.unitHint ?? null,
       presetPreferences: r.presetPreferences,
+      suggestedBudgetsKobo: r.suggestedBudgetsKobo ?? null,
     }));
   },
 });
@@ -37,6 +38,12 @@ export const featured = authedQuery({
     return rows
       .filter((r) => r.active)
       .slice(0, 8)
-      .map((r) => ({ _id: r._id, name: r.name, unitHint: r.unitHint ?? null }));
+      .map((r) => ({
+        _id: r._id,
+        name: r.name,
+        unitHint: r.unitHint ?? null,
+        presetPreferences: r.presetPreferences,
+        suggestedBudgetsKobo: r.suggestedBudgetsKobo ?? null,
+      }));
   },
 });

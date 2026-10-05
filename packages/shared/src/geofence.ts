@@ -25,6 +25,14 @@ export function haversineMeters(a: { lat: number; lng: number }, b: { lat: numbe
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
+/**
+ * Development-only stand-in for a road distance when the Routes API key isn't configured: the
+ * straight line times a typical Akure detour factor. Production always uses the Routes API.
+ */
+export function estimatedRoadMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  return Math.round(haversineMeters(a, b) * 1.35);
+}
+
 /** Compass bearing from a to b in degrees [0, 360). Used to cluster deliveries by direction. */
 export function bearingDegrees(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const toRad = (d: number) => (d * Math.PI) / 180;

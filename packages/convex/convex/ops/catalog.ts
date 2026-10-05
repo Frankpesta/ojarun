@@ -19,6 +19,7 @@ export const catalogRow = v.object({
   category: v.string(),
   unitHint: v.optional(v.string()),
   presetPreferences: v.array(v.object({ group: v.string(), options: v.array(v.string()) })),
+  suggestedBudgetsKobo: v.optional(v.array(v.number())),
 });
 
 export type CatalogRow = {
@@ -27,7 +28,14 @@ export type CatalogRow = {
   category: string;
   unitHint?: string;
   presetPreferences: { group: string; options: string[] }[];
+  suggestedBudgetsKobo?: number[];
 };
+
+/** Up to 3 distinct whole-naira amounts of at least ₦100, ascending; undefined when none are valid. */
+export function cleanBudgets(raw: readonly number[] | undefined): number[] | undefined {
+  const ok = [...new Set((raw ?? []).filter((k) => Number.isSafeInteger(k) && k >= 100_00 && k % 100 === 0))];
+  return ok.length ? ok.sort((a, b) => a - b).slice(0, 3) : undefined;
+}
 
 const clean = (s: string) => s.trim().replace(/\s+/g, " ");
 
@@ -55,13 +63,19 @@ export async function upsertCatalog(ctx: MutationCtx, rows: CatalogRow[]) {
       category,
       unitHint: raw.unitHint ? clean(raw.unitHint) || undefined : undefined,
       presetPreferences,
+      suggestedBudgetsKobo: cleanBudgets(raw.suggestedBudgetsKobo),
       active: true,
       searchText: catalogSearchText(name, aliases),
     };
     const match = byName.get(name.toLowerCase());
     if (match) {
-      // Keep ops' on/off choice; an import refreshes content, not availability.
-      await ctx.db.patch(match._id, { ...doc, active: match.active });
+      // Keep ops' on/off choice; an import refreshes content, not availability. Rows without
+      // budget chips keep the ones ops set in the dashboard.
+      await ctx.db.patch(match._id, {
+        ...doc,
+        suggestedBudgetsKobo: doc.suggestedBudgetsKobo ?? match.suggestedBudgetsKobo,
+        active: match.active,
+      });
       updated++;
     } else {
       const id = await ctx.db.insert("catalogItems", doc);
@@ -106,5 +120,29 @@ export const setActive = opsMutation({
       after: { active },
     });
     await ctx.db.patch(id, { active });
+  },
+});
+
+/** Quick budget chips on the add-item sheet. An empty list falls back to the generic chips. */
+export const setBudgets = opsMutation({
+  args: { id: v.id("catalogItems"), budgetsKobo: v.array(v.number()), reason: v.string() },
+  handler: async (ctx, { id, budgetsKobo, reason }) => {
+    const item = await ctx.db.get(id);
+    if (!item) throw appError(ErrorCode.NOT_FOUND, "Item not found.");
+    if (budgetsKobo.length > 3) throw appError(ErrorCode.INVALID_INPUT, "Use at most 3 amounts.");
+    const next = cleanBudgets(budgetsKobo);
+    if (budgetsKobo.length && next?.length !== budgetsKobo.length) {
+      throw appError(ErrorCode.INVALID_INPUT, "Amounts must be different whole naira of at least ₦100.");
+    }
+    await audit(ctx, {
+      actorId: ctx.user._id,
+      action: "catalog.setBudgets",
+      targetTable: "catalogItems",
+      targetId: id,
+      reason,
+      before: { suggestedBudgetsKobo: item.suggestedBudgetsKobo ?? null },
+      after: { suggestedBudgetsKobo: next ?? null },
+    });
+    await ctx.db.patch(id, { suggestedBudgetsKobo: next });
   },
 });
