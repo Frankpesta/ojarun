@@ -133,7 +133,11 @@ export const quoteMarkets = action({
     if (state.missing.length) {
       const key = process.env.GOOGLE_MAPS_SERVER_KEY;
       if (key) {
-        const elements = await routeMatrix(state.missing, state.address, key);
+        // In development a failing key (e.g. billing not enabled yet) falls back to estimates.
+        const elements = await routeMatrix(state.missing, state.address, key).catch((e: unknown) => {
+          if (canEstimateDistances()) return [] as MatrixElement[];
+          throw e;
+        });
         const rows = elements
           .filter((e) => e.condition === "ROUTE_EXISTS" && e.originIndex !== undefined && e.distanceMeters !== undefined)
           .map((e) => ({
