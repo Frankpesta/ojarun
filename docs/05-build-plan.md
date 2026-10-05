@@ -68,7 +68,7 @@ These gate the launch more than the code does. The ops lead starts them in week 
 | L5 | **Termii account + sender ID registration** | Sender ID approval in Nigeria takes time |
 | L6 | **Google Cloud project**: billing, Places API (New), Routes API, Maps SDK for Android; budget alerts | Restricted keys per platform |
 | L7 | **Google Play Console** developer account (organisation) | D-U-N-S number and verification for organisation accounts take time |
-| L8 | **Domain + email** (`ojarun.ng` / `.com`), Resend domain verification (SPF/DKIM) | Receipts, Paystack callback page, privacy policy URL |
+| L8 | **Domain + email: `ojarun.ng` only** (decided 2026-10-05; register via a NiRA-accredited registrar), Resend domain verification (SPF/DKIM) | Receipts, Paystack callback page (`https://ojarun.ng/pay/return`), privacy policy URL |
 | L9 | **Legal**: terms of service, privacy policy (Nigeria Data Protection Act 2023), wallet terms (credits only, no deposits), shopper employment contracts | Needed for Play listing and checkout copy |
 | L10 | **Launch market data**: names, GPS coordinates, opening hours for Oja Oba, Isinkan, Oba Adesida/NEPA, Shasha, etc. (ops to verify list) + **Akure geofence polygon** | Seed data for M1 |
 | L11 | **Item catalogue v1**: about 80 common items with Yoruba/English aliases, unit hints and preset preferences | List builder in M2 |
