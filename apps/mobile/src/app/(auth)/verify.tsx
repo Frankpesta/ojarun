@@ -3,19 +3,16 @@ import { View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CaretLeft } from "phosphor-react-native";
-import { Button, OtpInput, Pressable, Text, useToast } from "@/components";
+import { BackButton, Button, OtpInput, Pressable, Text, useToast } from "@/components";
 import { useEmailAuth, type AuthMode } from "@/features/auth/useEmailAuth";
 import { friendlyError } from "@/lib/errors";
 import { haptic } from "@/lib/haptics";
-import { useTheme } from "@/theme/ThemeProvider";
 
 const RESEND_AFTER_SEC = 30;
 
 export default function VerifyScreen() {
   const { email, mode } = useLocalSearchParams<{ email: string; mode: AuthMode }>();
   const { verify, resendCode } = useEmailAuth();
-  const { colors } = useTheme();
   const toast = useToast();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -62,24 +59,17 @@ export default function VerifyScreen() {
       <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
         bottomOffset={24}
-        contentContainerClassName="flex-grow px-gutter pb-6"
+        contentContainerClassName="flex-grow px-6 pt-2 pb-6"
       >
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Change email"
-          className="-ml-3 mt-2 h-11 w-11 items-center justify-center"
-        >
-          <CaretLeft size={22} color={colors.ink} weight="bold" />
-        </Pressable>
+        <BackButton label="Change email" />
 
-        <View className="mt-6 gap-2">
+        <View className="mt-6 gap-2.5">
           <Text variant="title" accessibilityRole="header">
             Check your email
           </Text>
           <Text variant="body" tone="muted">
-            We sent a 6-digit code to <Text variant="bodyStrong">{email}</Text>. It can take a minute to arrive, so
-            check spam too.
+            Enter the code we sent to <Text variant="bodyStrong">{email}</Text>. It can take a minute, so check spam
+            too.
           </Text>
         </View>
 

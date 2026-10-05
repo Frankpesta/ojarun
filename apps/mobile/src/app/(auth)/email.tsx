@@ -3,8 +3,7 @@ import { View } from "react-native";
 import { router } from "expo-router";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, Input, Text } from "@/components";
-import { Wordmark } from "@/components/Wordmark";
+import { BackButton, Button, Input, Text } from "@/components";
 import { useEmailAuth } from "@/features/auth/useEmailAuth";
 import { friendlyError } from "@/lib/errors";
 
@@ -41,15 +40,15 @@ export default function EmailScreen() {
       <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
         bottomOffset={24}
-        contentContainerClassName="flex-grow px-gutter pt-10 pb-6"
+        contentContainerClassName="flex-grow px-6 pt-2 pb-6"
       >
-        <Wordmark />
-        <View className="mt-12 gap-2">
+        <BackButton />
+        <View className="mt-6 gap-2.5">
           <Text variant="title" accessibilityRole="header">
             What's your email?
           </Text>
           <Text variant="body" tone="muted">
-            We'll send you a 6-digit code to sign in. New here? The same code creates your account.
+            We'll send a 6-digit code. No password to remember. New here? The same code sets up your account.
           </Text>
         </View>
         <View className="mt-8 gap-4">
@@ -72,7 +71,7 @@ export default function EmailScreen() {
           />
           <Button label="Send code" onPress={submit} loading={sending} disabled={!email} />
         </View>
-        <Text variant="caption" tone="muted" className="mt-auto pt-8">
+        <Text variant="small" tone="faint" className="mt-auto pt-8 text-center">
           By continuing you agree to OjaRun's Terms of Service and Privacy Policy.
         </Text>
       </KeyboardAwareScrollView>

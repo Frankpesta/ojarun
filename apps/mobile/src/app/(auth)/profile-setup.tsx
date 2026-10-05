@@ -7,6 +7,7 @@ import { useMutation } from "convex/react";
 import { api } from "@ojarun/convex/api";
 import { normalizeNigerianPhone } from "@ojarun/shared";
 import { Button, Input, Text } from "@/components";
+import { StepBar } from "@/features/auth/StepBar";
 import { useMe } from "@/features/auth/useSession";
 import { friendlyError } from "@/lib/errors";
 
@@ -28,7 +29,9 @@ export default function ProfileSetupScreen() {
     setError(null);
     try {
       await updateProfile({ name, phone });
-      router.replace("/");
+      // New customers set a delivery address next; the router sends everyone else on.
+      if (me?.role === "customer") router.replace({ pathname: "/address", params: { onboarding: "1" } });
+      else router.replace("/");
     } catch (e) {
       setError(friendlyError(e));
     } finally {
@@ -41,17 +44,18 @@ export default function ProfileSetupScreen() {
       <KeyboardAwareScrollView
         keyboardShouldPersistTaps="handled"
         bottomOffset={24}
-        contentContainerClassName="flex-grow px-gutter pt-10 pb-6"
+        contentContainerClassName="flex-grow px-6 pt-6 pb-6"
       >
-        <View className="gap-2">
+        <StepBar step={2} of={3} />
+        <View className="mt-7 gap-2.5">
           <Text variant="title" accessibilityRole="header">
             A few details
           </Text>
           <Text variant="body" tone="muted">
-            Your shopper sees your name and calls this number when they arrive with your order.
+            Your shopper sees your name and calls this number when they reach your gate.
           </Text>
         </View>
-        <View className="mt-8 gap-5">
+        <View className="mt-7 gap-5">
           <Input
             label="Your name"
             value={name}
@@ -77,6 +81,11 @@ export default function ProfileSetupScreen() {
             error={phoneError}
             leading={
               <View className="flex-row items-center gap-2 pr-1">
+                <View className="flex-row overflow-hidden" style={{ width: 22, height: 15, borderRadius: 3 }}>
+                  <View style={{ flex: 1, backgroundColor: "#118A4E" }} />
+                  <View style={{ flex: 1, backgroundColor: "#FFFFFF" }} />
+                  <View style={{ flex: 1, backgroundColor: "#118A4E" }} />
+                </View>
                 <Text variant="bodyStrong" tabular>
                   +234
                 </Text>

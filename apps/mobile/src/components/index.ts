@@ -14,6 +14,7 @@ export * from "./OfflineBanner";
 export * from "./Screen";
 export * from "./Card";
 export * from "./Sticker";
+export * from "./BackButton";
 export * from "./TabBar";
 export * from "./Toast";
 export * from "./sheet/Sheet";

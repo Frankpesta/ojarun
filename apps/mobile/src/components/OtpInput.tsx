@@ -54,11 +54,15 @@ export const OtpInput = forwardRef<TextInput, OtpInputProps>(function OtpInput(
               <View
                 key={i}
                 className="flex-1 items-center justify-center rounded-input bg-surface"
-                style={{ height: 60, borderWidth: active || error ? 2 : 1, borderColor }}
+                style={{ height: 64, borderRadius: 14, borderWidth: active || error ? 2.5 : 1.5, borderColor }}
               >
-                <Text variant="title" tabular>
-                  {char}
-                </Text>
+                {char ? (
+                  <Text variant="title" tabular style={{ fontSize: 26 }}>
+                    {char}
+                  </Text>
+                ) : active ? (
+                  <View className="bg-brand" style={{ width: 2, height: 26, borderRadius: 1 }} />
+                ) : null}
               </View>
             );
           })}
