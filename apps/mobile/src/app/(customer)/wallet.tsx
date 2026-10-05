@@ -46,7 +46,7 @@ export default function CustomerWallet() {
             >
               {formatNaira(balance)}
             </Text>
-            <Text variant="small" tone="forestMuted">
+            <Text variant="small" tone="onForestSoft">
               Change and refunds land here. Spend it on your next order or withdraw it.
             </Text>
           </View>
@@ -129,7 +129,7 @@ function Activity() {
               <View
                 key={r._id}
                 accessible
-                className={`flex-row items-center gap-3 px-4 py-3.5 ${i < rows.length - 1 ? "border-b border-line" : ""}`}
+                className={`flex-row items-center gap-3 px-4 py-3.5 ${i < rows.length - 1 ? "border-b border-line-soft" : ""}`}
               >
                 <View className={`h-10 w-10 items-center justify-center rounded-full ${credit ? "bg-brand-tint" : "bg-surface-sunken"}`}>
                   <Icon size={18} color={credit ? colors.brand : colors.inkMuted} weight="bold" />

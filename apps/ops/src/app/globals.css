@@ -11,8 +11,10 @@
   --color-ink: 26 23 20;
   --color-ink-muted: 92 85 77;
   --color-ink-faint: 107 100 92;
+  --color-placeholder: 133 125 114;
   --color-line: 236 230 218;
-  --color-line-strong: 221 214 202;
+  --color-line-soft: 241 236 226;
+  --color-line-strong: 229 222 207;
   --color-brand: 21 128 61;
   --color-brand-pressed: 14 90 43;
   --color-brand-tint: 227 242 231;
@@ -33,6 +35,7 @@
   --color-forest: 11 59 34;
   --color-on-forest: 255 255 255;
   --color-forest-muted: 167 215 181;
+  --color-on-forest-soft: 207 230 214;
   --color-forest-active: 220 247 228;
   --color-live: 74 222 128;
   color-scheme: light;
@@ -47,7 +50,9 @@
     --color-ink: 232 245 236;
     --color-ink-muted: 168 181 173;
     --color-ink-faint: 142 156 148;
+    --color-placeholder: 127 141 133;
     --color-line: 36 57 44;
+    --color-line-soft: 29 49 37;
     --color-line-strong: 51 80 64;
     --color-brand: 74 222 128;
     --color-brand-pressed: 34 197 94;
@@ -69,6 +74,7 @@
     --color-forest: 23 59 39;
     --color-on-forest: 232 245 236;
     --color-forest-muted: 168 201 179;
+    --color-on-forest-soft: 201 221 208;
     --color-forest-active: 74 222 128;
     --color-live: 74 222 128;
     color-scheme: dark;
@@ -83,7 +89,9 @@
   --color-ink: 232 245 236;
   --color-ink-muted: 168 181 173;
   --color-ink-faint: 142 156 148;
+  --color-placeholder: 127 141 133;
   --color-line: 36 57 44;
+  --color-line-soft: 29 49 37;
   --color-line-strong: 51 80 64;
   --color-brand: 74 222 128;
   --color-brand-pressed: 34 197 94;
@@ -105,6 +113,7 @@
   --color-forest: 23 59 39;
   --color-on-forest: 232 245 236;
   --color-forest-muted: 168 201 179;
+  --color-on-forest-soft: 201 221 208;
   --color-forest-active: 74 222 128;
   --color-live: 74 222 128;
   color-scheme: dark;

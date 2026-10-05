@@ -269,7 +269,7 @@ function Markets() {
           return (
             <View
               key={m._id}
-              className={`flex-row items-center gap-3.5 px-4 py-3.5 ${i < rows.length - 1 ? "border-b border-line" : ""}`}
+              className={`flex-row items-center gap-3.5 px-4 py-3.5 ${i < rows.length - 1 ? "border-b border-line-soft" : ""}`}
               accessible
               accessibilityLabel={`${m.name}${m.meters != null ? `, ${(m.meters / 1000).toFixed(1)} kilometres away` : ""}`}
             >

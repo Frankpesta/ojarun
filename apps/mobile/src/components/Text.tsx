@@ -12,6 +12,7 @@ export type Tone =
   | "onAccent"
   | "onForest"
   | "forestMuted"
+  | "onForestSoft"
   | "live"
   | "warningInk"
   | "inherit";
@@ -38,6 +39,7 @@ const TONE: Record<Tone, string> = {
   onAccent: "text-on-accent",
   onForest: "text-on-forest",
   forestMuted: "text-forest-muted",
+  onForestSoft: "text-on-forest-soft",
   live: "text-live",
   warningInk: "text-warning-ink",
   inherit: "",

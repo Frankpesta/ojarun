@@ -43,7 +43,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           editable={editable}
           accessibilityLabelledBy={`${label}-label`}
           accessibilityLabel={label}
-          placeholderTextColor={colors.inkFaint}
+          placeholderTextColor={colors.placeholder}
           selectionColor={colors.brand}
           cursorColor={colors.brand}
           onFocus={(e) => {

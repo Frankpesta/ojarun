@@ -11,5 +11,5 @@ export function Card({ children, className = "", ...rest }: ViewProps & { childr
 }
 
 export function Divider({ className = "" }: { className?: string }) {
-  return <View className={`h-px bg-line ${className}`} />;
+  return <View className={`h-px bg-line-soft ${className}`} />;
 }

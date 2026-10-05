@@ -27,7 +27,9 @@ export type ColorToken =
   | "ink"
   | "inkMuted"
   | "inkFaint"
+  | "placeholder"
   | "line"
+  | "lineSoft"
   | "lineStrong"
   | "brand"
   | "brandPressed"
@@ -44,6 +46,7 @@ export type ColorToken =
   | "forest"
   | "onForest"
   | "forestMuted"
+  | "onForestSoft"
   | "forestActive"
   | "live"
   | "error"
@@ -62,8 +65,13 @@ export const lightTheme: Theme = {
   ink: "#1A1714",
   inkMuted: "#5C554D",
   inkFaint: "#6B645C",
+  /** Input placeholders: lighter than inkFaint so hints never read as typed text. */
+  placeholder: "#857D72",
   line: "#ECE6DA",
-  lineStrong: "#DDD6CA",
+  /** Hairlines between rows inside a card. */
+  lineSoft: "#F1ECE2",
+  /** Field, chip and outlined-button borders. */
+  lineStrong: "#E5DECF",
   brand: palette.green600,
   brandPressed: "#0E5A2B",
   brandTint: "#E3F2E7",
@@ -85,6 +93,8 @@ export const lightTheme: Theme = {
   forest: "#0B3B22",
   onForest: palette.white,
   forestMuted: "#A7D7B5",
+  /** Secondary body text on forest (softer than onForest, lighter than forestMuted). */
+  onForestSoft: "#CFE6D6",
   /** Active tab highlight on the floating bar. */
   forestActive: "#DCF7E4",
   /** Bright "live" green: progress fills and status dots on forest. */
@@ -99,7 +109,9 @@ export const darkTheme: Theme = {
   ink: "#E8F5EC",
   inkMuted: "#A8B5AD",
   inkFaint: "#8E9C94",
+  placeholder: "#7F8D85",
   line: "#24392C",
+  lineSoft: "#1D3125",
   lineStrong: "#335040",
   brand: palette.greenDark,
   brandPressed: "#22C55E",
@@ -121,6 +133,7 @@ export const darkTheme: Theme = {
   forest: "#173B27",
   onForest: "#E8F5EC",
   forestMuted: "#A8C9B3",
+  onForestSoft: "#C9DDD0",
   forestActive: "#4ADE80",
   live: palette.greenDark,
 };

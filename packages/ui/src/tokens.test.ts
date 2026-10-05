@@ -30,6 +30,8 @@ const REQUIRED: [keyof Theme, keyof Theme, number][] = [
   ["forest", "forestActive", 4.5],
   ["warningInk", "warningTint", 4.5],
   ["inkFaint", "bg", 4.5],
+  ["placeholder", "surface", 3.5],
+  ["onForestSoft", "forest", 4.5],
 ];
 
 describe.each([
