@@ -32,6 +32,10 @@ const config: ExpoConfig = {
     "expo-router",
     "expo-secure-store",
     "expo-web-browser",
+    // Shoppers photograph every item; customers never see a camera prompt.
+    ["expo-camera", { cameraPermission: "OjaRun uses the camera so your customer can see each item you buy.", microphonePermission: false, recordAudioAndroid: false }],
+    // Foreground only (Play data-safety form): recorded when a shopper starts shopping or arrives.
+    ["expo-location", { locationWhenInUsePermission: "OjaRun records where you are when you start shopping and when you arrive." }],
     // Android Maps SDK key, restricted to the package name + SHA-1. Set as an EAS secret.
     ["react-native-maps", { androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_ANDROID_KEY }],
     [
