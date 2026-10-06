@@ -66,12 +66,23 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
               scale={false}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
-              accessibilityLabel={label}
+              accessibilityLabel={options.tabBarBadge !== undefined ? `${label}, ${options.tabBarBadge} waiting` : label}
               onPress={onPress}
               className={`flex-1 items-center justify-center gap-0.5 ${focused ? "bg-forest-active" : ""}`}
               style={{ borderRadius: 20 }}
             >
               {options.tabBarIcon?.({ focused, color, size: 22 })}
+              {options.tabBarBadge !== undefined ? (
+                <View
+                  className="absolute items-center justify-center rounded-full bg-accent px-1"
+                  style={{ top: 6, left: "58%", minWidth: 18, height: 18 }}
+                  accessibilityElementsHidden
+                >
+                  <Text variant="caption" tone="onAccent" style={{ fontSize: 11 }} className="font-extrabold">
+                    {options.tabBarBadge}
+                  </Text>
+                </View>
+              ) : null}
               <Text variant="caption" style={{ color, fontSize: 11 }} className={focused ? "font-extrabold" : ""}>
                 {label}
               </Text>

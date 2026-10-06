@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { randomUUID } from "expo-crypto";
 import type { Id } from "@ojarun/convex/dataModel";
-import { backoffMs, type QueueJobBase } from "@ojarun/shared";
+import { backoffMs, lagosDate, type QueueJobBase } from "@ojarun/shared";
 import { zustandStorage } from "@/lib/storage";
 import { deleteQueuedPhoto } from "./photos";
 
@@ -34,6 +34,8 @@ type NewJob = QueueJob extends infer J ? (J extends QueueJob ? Omit<J, keyof Que
 
 type UploadQueue = {
   jobs: QueueJob[];
+  /** How many jobs went through today (Lagos date), for the Uploads tab. */
+  sent: { date: string; count: number };
   /** Adds a job to a batch's lane. Every job in one market run runs in order. */
   enqueue: (batchId: Id<"batches">, job: NewJob, id?: string) => string;
   /** Marks a job as started, so a second runner tick can't pick it up too. */
@@ -55,6 +57,7 @@ export const useUploadQueue = create<UploadQueue>()(
   persist(
     (set) => ({
       jobs: [],
+      sent: { date: "", count: 0 },
       enqueue: (batchId, job, id = randomUUID()) => {
         const now = Date.now();
         set((s) => ({
@@ -64,7 +67,14 @@ export const useUploadQueue = create<UploadQueue>()(
       },
       start: (id) => set((s) => ({ jobs: s.jobs.map((j) => (j.id === id ? { ...j, status: "running" } : j)) })),
       patch: (id, patch) => set((s) => ({ jobs: s.jobs.map((j) => (j.id === id ? ({ ...j, ...patch } as QueueJob) : j)) })),
-      succeed: (id) => set((s) => ({ jobs: s.jobs.filter((j) => j.id !== id) })),
+      succeed: (id) =>
+        set((s) => {
+          const today = lagosDate(Date.now());
+          return {
+            jobs: s.jobs.filter((j) => j.id !== id),
+            sent: { date: today, count: (s.sent.date === today ? s.sent.count : 0) + 1 },
+          };
+        }),
       retryLater: (id, error) =>
         set((s) => ({
           jobs: s.jobs.map((j) =>
@@ -91,3 +101,21 @@ export const useUploadQueue = create<UploadQueue>()(
 
 /** Jobs still to send for a batch: the shopper can't head out while any remain (05 §8). */
 export const pendingForBatch = (jobs: readonly QueueJob[], batchId: string) => jobs.filter((j) => j.lane === batchId);
+
+/** The latest queued outcome for an item, shown before the server has it. */
+export function queuedOutcome(jobs: readonly QueueJob[], itemId: string) {
+  let found: Extract<QueueJob, { type: "setOutcome" }> | undefined;
+  for (const j of jobs) if (j.type === "setOutcome" && j.itemId === itemId) found = j;
+  return found;
+}
+
+/** The newest photo still on the phone for an item, if any. */
+export function queuedPhoto(jobs: readonly QueueJob[], itemId: string) {
+  let found: Extract<QueueJob, { type: "uploadPhoto" }> | undefined;
+  for (const j of jobs) if (j.type === "uploadPhoto" && j.itemId === itemId) found = j;
+  return found;
+}
+
+/** Start shopping is queued but not sent: treat the run as started. */
+export const startQueued = (jobs: readonly QueueJob[], batchId: string) =>
+  jobs.some((j) => j.type === "startShopping" && j.batchId === batchId);

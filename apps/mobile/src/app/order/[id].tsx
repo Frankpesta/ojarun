@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { ScrollView, View } from "react-native";
+import { Image } from "expo-image";
 import { useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "convex/react";
@@ -15,12 +17,13 @@ import {
   type OrderStatus,
 } from "@ojarun/shared";
 import { fontFamily } from "@ojarun/ui";
-import { BackButton, ItemStatusPill, Skeleton, Sticker, Text, stickerFor } from "@/components";
+import { BackButton, Button, ItemStatusPill, Pressable, Sheet, Skeleton, Sticker, Text, stickerFor, useSheet } from "@/components";
 import { RoleGuard } from "@/features/auth/RoleGuard";
 import { FallbackTile } from "@/features/list/ItemSheet";
 import { useTheme } from "@/theme/ThemeProvider";
 
 type Order = NonNullable<FunctionReturnType<typeof api.orders.get>>;
+type OrderItem = Order["items"][number];
 
 export default function OrderScreen() {
   return (
@@ -73,6 +76,8 @@ function OrderDetail() {
   const { colors } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const order = useQuery(api.orders.get, id ? { orderId: id as Id<"orders"> } : "skip");
+  const photoSheet = useSheet();
+  const [viewing, setViewing] = useState<OrderItem | null>(null);
 
   if (order === undefined) {
     return (
@@ -160,23 +165,40 @@ function OrderDetail() {
             <View className="overflow-hidden rounded-card border border-line bg-surface">
               {order.items.map((item, i) => {
                 const kind = stickerFor(item.name);
-                const details = [...item.preferences, item.note].filter(Boolean).join(" · ");
+                const art = kind ? <Sticker kind={kind} size={52} /> : <FallbackTile size={52} />;
                 return (
                   <View
                     key={item._id}
                     className={`flex-row items-center gap-3 px-3.5 py-3 ${i < order.items.length - 1 ? "border-b border-line-soft" : ""}`}
-                    accessible
-                    accessibilityLabel={`${item.name}, budget ${formatNaira(item.budget)}, ${item.status}`}
+                    accessible={!item.photoUrl}
+                    accessibilityLabel={`${item.name}, ${itemLine(item)}, ${item.status}`}
                   >
-                    {kind ? <Sticker kind={kind} size={52} /> : <FallbackTile size={52} />}
+                    {item.photoUrl ? (
+                      <Pressable
+                        onPress={() => {
+                          setViewing(item);
+                          photoSheet.present();
+                        }}
+                        accessibilityRole="imagebutton"
+                        accessibilityLabel={`See the photo of ${item.name}`}
+                      >
+                        <Image
+                          source={{ uri: item.photoUrl }}
+                          placeholder={item.photoThumbhash ? { thumbhash: item.photoThumbhash } : undefined}
+                          style={{ width: 52, height: 52, borderRadius: 12 }}
+                          contentFit="cover"
+                          transition={200}
+                        />
+                      </Pressable>
+                    ) : (
+                      art
+                    )}
                     <View className="flex-1 gap-0.5">
                       <Text variant="bodyStrong" numberOfLines={1}>
                         {item.name}
                       </Text>
-                      <Text variant="small" tone="faint" numberOfLines={1}>
-                        {item.amountSpent > 0
-                          ? `${formatNaira(item.amountSpent)} of ${formatNaira(item.budget)}`
-                          : `Budget ${formatNaira(item.budget)}${details ? ` · ${details}` : ""}`}
+                      <Text variant="small" tone="faint" numberOfLines={2}>
+                        {itemLine(item)}
                       </Text>
                     </View>
                     {ended ? null : <ItemStatusPill status={item.status} />}
@@ -228,8 +250,55 @@ function OrderDetail() {
           </View>
         </View>
       </ScrollView>
+
+      <Sheet
+        sheet={photoSheet}
+        title={viewing?.name ?? "Photo"}
+        subtitle={viewing ? itemLine(viewing) : undefined}
+        onDismiss={() => setViewing(null)}
+        footer={<Button label="Done" variant="secondary" onPress={photoSheet.dismiss} />}
+      >
+        {viewing?.photoUrl ? (
+          <View className="gap-3">
+            <Image
+              source={{ uri: viewing.photoUrl }}
+              placeholder={viewing.photoThumbhash ? { thumbhash: viewing.photoThumbhash } : undefined}
+              style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: 16 }}
+              contentFit="cover"
+              accessibilityLabel={`Photo of ${viewing.name}`}
+            />
+            {viewing.shopperNote ? (
+              <Text variant="body" style={{ fontSize: 15, lineHeight: 22 }}>
+                {order.shopperName ? `${order.shopperName}: ` : ""}“{viewing.shopperNote}”
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+      </Sheet>
     </View>
   );
+}
+
+/** One line under an item: what the shopper did once they've done it, otherwise the brief. */
+function itemLine(item: OrderItem): string {
+  const funded = item.budget + item.approvedExtra;
+  switch (item.status) {
+    case "skipped":
+      return item.shopperNote ? `Not available · ${item.shopperNote}` : "Not available, full budget comes back to you";
+    case "bought":
+    case "adjusted": {
+      const got = item.quantityNote ? `Got ${item.quantityNote}` : item.status === "adjusted" ? "Changed" : "Bought";
+      const spent = item.amountSpent > 0 ? ` · ${formatNaira(item.amountSpent)} of ${formatNaira(funded)}` : "";
+      const note = item.status === "adjusted" && item.shopperNote ? ` · ${item.shopperNote}` : "";
+      return `${got}${spent}${note}`;
+    }
+    default: {
+      const details = [...item.preferences, item.note].filter(Boolean).join(" · ");
+      return item.amountSpent > 0
+        ? `${formatNaira(item.amountSpent)} of ${formatNaira(funded)}`
+        : `Budget ${formatNaira(funded)}${details ? ` · ${details}` : ""}`;
+    }
+  }
 }
 
 function Line({ label, value }: { label: string; value: string }) {

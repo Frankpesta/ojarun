@@ -3,10 +3,12 @@ import { CalendarCheck, CloudArrowUp, User } from "phosphor-react-native";
 import { FloatingTabBar, tabScreenOptions } from "@/components/TabBar";
 import { RoleGuard } from "@/features/auth/RoleGuard";
 import { QueueRunner } from "@/features/shopper/QueueRunner";
+import { useUploadQueue } from "@/features/shopper/useUploadQueue";
 import { useTheme } from "@/theme/ThemeProvider";
 
 export default function ShopperLayout() {
   const { colors } = useTheme();
+  const waiting = useUploadQueue((s) => s.jobs.length);
   return (
     <RoleGuard role="shopper">
       <QueueRunner />
@@ -24,6 +26,7 @@ export default function ShopperLayout() {
           name="queue"
           options={{
             title: "Uploads",
+            tabBarBadge: waiting || undefined,
             tabBarIcon: ({ color, focused }) => (
               <CloudArrowUp size={24} color={color as string} weight={focused ? "fill" : "regular"} />
             ),
