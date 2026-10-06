@@ -95,7 +95,9 @@ export default function UsersPage() {
 
 function RoleDrawer({ user, onClose }: { user: Row; onClose: () => void }) {
   const setRole = useMutation(api.ops.users.setRole);
+  const createShopper = useMutation(api.ops.shoppers.createShopper);
   const [role, setRoleValue] = useState<Role>(user.role);
+  const [legalName, setLegalName] = useState(user.role === "shopper" ? "" : (user.name ?? ""));
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -104,7 +106,8 @@ function RoleDrawer({ user, onClose }: { user: Row; onClose: () => void }) {
     setSaving(true);
     setError(null);
     try {
-      await setRole({ userId: user._id, role, reason });
+      if (role === "shopper") await createShopper({ userId: user._id, legalName, reason });
+      else await setRole({ userId: user._id, role, reason });
       onClose();
     } catch (e) {
       setError(e instanceof ConvexError ? String((e.data as { message?: string }).message ?? "Couldn't save.") : "Couldn't save. Try again.");
@@ -121,7 +124,15 @@ function RoleDrawer({ user, onClose }: { user: Row; onClose: () => void }) {
       description="Shoppers see assigned batches and can pay traders. Ops can change anything here."
       footer={
         <>
-          <Button onClick={save} loading={saving} disabled={role === user.role || reason.trim().length < 3}>
+          <Button
+            onClick={save}
+            loading={saving}
+            disabled={
+              (role === user.role && role !== "shopper") ||
+              (role === "shopper" && legalName.trim().split(/\s+/).length < 2) ||
+              reason.trim().length < 3
+            }
+          >
             Save role
           </Button>
           <Button variant="ghost" onClick={onClose}>
@@ -144,6 +155,20 @@ function RoleDrawer({ user, onClose }: { user: Row; onClose: () => void }) {
           </label>
         ))}
       </fieldset>
+      {role === "shopper" ? (
+        <label className="mt-5 flex flex-col gap-2">
+          <span className="text-small font-medium text-ink-muted">Legal name, exactly as on their bank account</span>
+          <input
+            value={legalName}
+            onChange={(e) => setLegalName(e.target.value)}
+            placeholder={user.role === "shopper" ? "Re-enter to update it" : "e.g. Adebola Funmilayo Okon"}
+            className="h-11 rounded-input bg-surface px-4 text-body ring-1 ring-line-strong placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-brand"
+          />
+          <span className="text-caption text-ink-faint">
+            Trader payments are checked against this name, so a shopper can never pay themselves.
+          </span>
+        </label>
+      ) : null}
       <label className="mt-5 flex flex-col gap-2">
         <span className="text-small font-medium text-ink-muted">Reason (saved to the audit log)</span>
         <textarea

@@ -5,15 +5,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignOutButton, UserButton } from "@clerk/nextjs";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import { Basket, CalendarDots, GearSix, MapTrifold, SignOut, Storefront, UsersThree } from "@phosphor-icons/react";
+import { Basket, CalendarDots, GearSix, IdentificationBadge, MapTrifold, Path, SignOut, Storefront, UsersThree } from "@phosphor-icons/react";
 import { api } from "@ojarun/convex/api";
 import { EmptyState } from "@/components/ui";
 
 const NAV = [
+  { href: "/dispatch", label: "Dispatch", icon: Path },
   { href: "/markets", label: "Markets", icon: Storefront },
   { href: "/slots", label: "Delivery slots", icon: CalendarDots },
   { href: "/catalog", label: "Catalogue", icon: Basket },
   { href: "/delivery-area", label: "Delivery area", icon: MapTrifold },
+  { href: "/shoppers", label: "Shoppers", icon: IdentificationBadge },
   { href: "/users", label: "People", icon: UsersThree },
   { href: "/settings", label: "Settings", icon: GearSix },
 ] as const;
