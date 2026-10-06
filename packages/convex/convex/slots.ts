@@ -54,6 +54,7 @@ export const closeAtCutoff = internalMutation({
     // Ops may have moved the cutoff; a later run handles the new time.
     if (!slot || slot.status !== "open" || slot.cutoffAt > Date.now()) return;
     await ctx.db.patch(slotId, { status: "closed" });
+    await ctx.scheduler.runAfter(0, internal.batching.runForSlot, { slotId });
   },
 });
 

@@ -139,7 +139,7 @@ export const create = customerMutation({
 });
 
 async function orderView(ctx: QueryCtx, order: Doc<"orders">) {
-  const [market, slot, items, events] = await Promise.all([
+  const [market, slot, items, events, shopper] = await Promise.all([
     ctx.db.get(order.marketId),
     ctx.db.get(order.slotId),
     ctx.db
@@ -150,6 +150,7 @@ async function orderView(ctx: QueryCtx, order: Doc<"orders">) {
       .query("statusEvents")
       .withIndex("by_order", (q) => q.eq("orderId", order._id))
       .collect(),
+    order.shopperId ? ctx.db.get(order.shopperId) : null,
   ]);
   return {
     _id: order._id,
@@ -162,19 +163,27 @@ async function orderView(ctx: QueryCtx, order: Doc<"orders">) {
     totals: order.totals,
     bufferPct: order.bufferPct,
     holdExpiresAt: order.holdExpiresAt,
-    items: items
-      .sort((a, b) => a.position - b.position)
-      .map((i) => ({
-        _id: i._id,
-        name: i.name,
-        catalogItemId: i.catalogItemId ?? null,
-        budget: i.budget,
-        preferences: i.preferences,
-        note: i.note ?? null,
-        status: i.status,
-        amountSpent: i.amountSpent,
-        approvedExtra: i.approvedExtra,
-      })),
+    shopperName: shopper?.name?.split(/\s+/)[0] ?? null,
+    items: await Promise.all(
+      items
+        .sort((a, b) => a.position - b.position)
+        .map(async (i) => ({
+          _id: i._id,
+          name: i.name,
+          catalogItemId: i.catalogItemId ?? null,
+          budget: i.budget,
+          preferences: i.preferences,
+          note: i.note ?? null,
+          status: i.status,
+          amountSpent: i.amountSpent,
+          approvedExtra: i.approvedExtra,
+          // Storage URLs are only handed out here, after the ownership check in `get`.
+          photoUrl: i.photoStorageId ? await ctx.storage.getUrl(i.photoStorageId) : null,
+          photoThumbhash: i.photoThumbhash ?? null,
+          shopperNote: i.shopperNote ?? null,
+          quantityNote: i.quantityNote ?? null,
+        })),
+    ),
     timeline: events.sort((a, b) => a.at - b.at).map((e) => ({ status: e.status, at: e.at })),
   };
 }

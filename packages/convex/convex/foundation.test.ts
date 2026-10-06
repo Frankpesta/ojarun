@@ -83,22 +83,37 @@ describe("role enforcement", () => {
     await expect(t.query(api.settings.publicSettings, {})).rejects.toThrow(/Sign in/);
   });
 
-  it("lets ops grant shopper role with an audited reason", async () => {
+  it("lets ops make a shopper with a legal name and an audited reason", async () => {
     const t = setup();
     const ops = await signIn(t, "clerk_ops", "08030000001");
     await makeRole(t, ops.userId, "ops");
     const cust = await signIn(t, "clerk_b", "08030000002");
 
     await expect(
-      ops.as.mutation(api.ops.users.setRole, { userId: cust.userId, role: "shopper", reason: "  " }),
+      ops.as.mutation(api.ops.users.setRole, { userId: cust.userId, role: "shopper", reason: "Hired 2 Oct" }),
+    ).rejects.toThrow(/Add shopper/);
+    await expect(
+      ops.as.mutation(api.ops.shoppers.createShopper, { userId: cust.userId, legalName: "Ada Okafor", reason: "  " }),
     ).rejects.toThrow(/reason/);
+    await expect(
+      ops.as.mutation(api.ops.shoppers.createShopper, { userId: cust.userId, legalName: "Ada", reason: "Hired 2 Oct" }),
+    ).rejects.toThrow(/full legal name/);
 
-    await ops.as.mutation(api.ops.users.setRole, { userId: cust.userId, role: "shopper", reason: "Hired 2 Oct" });
+    await ops.as.mutation(api.ops.shoppers.createShopper, {
+      userId: cust.userId,
+      legalName: " Adá  Okafor ",
+      reason: "Hired 2 Oct",
+    });
     expect(await cust.as.query(api.users.me, {})).toMatchObject({ role: "shopper" });
+    const profile = await t.run((ctx) => ctx.db.query("shopperProfiles").unique());
+    expect(profile).toMatchObject({ legalName: "Adá Okafor", nameTokens: ["ada", "okafor"], active: true, onShift: false });
 
     const log = await t.run((ctx) => ctx.db.query("auditLog").collect());
     expect(log).toHaveLength(1);
-    expect(log[0]).toMatchObject({ action: "user.setRole", reason: "Hired 2 Oct", actorId: ops.userId });
+    expect(log[0]).toMatchObject({ action: "shopper.create", reason: "Hired 2 Oct", actorId: ops.userId });
+
+    await ops.as.mutation(api.ops.users.setRole, { userId: cust.userId, role: "customer", reason: "Left" });
+    expect(await t.run((ctx) => ctx.db.query("shopperProfiles").unique())).toMatchObject({ active: false, onShift: false });
   });
 
   it("stops suspended users", async () => {

@@ -37,6 +37,9 @@ export const setRole = opsMutation({
       throw appError(ErrorCode.FORBIDDEN, "You can't remove your own ops access.");
     }
     if (target.role === next) return;
+    if (next === "shopper") {
+      throw appError(ErrorCode.INVALID_INPUT, "Use Add shopper, which also records their legal name.");
+    }
     await audit(ctx, {
       actorId: ctx.user._id,
       action: "user.setRole",
@@ -47,6 +50,13 @@ export const setRole = opsMutation({
       after: { role: next },
     });
     await ctx.db.patch(userId, { role: next });
+    if (target.role === "shopper") {
+      const profile = await ctx.db
+        .query("shopperProfiles")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .unique();
+      if (profile) await ctx.db.patch(profile._id, { active: false, onShift: false });
+    }
   },
 });
 
