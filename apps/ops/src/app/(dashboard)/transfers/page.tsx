@@ -152,6 +152,7 @@ export default function TransfersPage() {
         )}
       </section>
 
+      <Withdrawals />
       {review ? <ReviewDrawer review={review} onClose={() => setReview(null)} /> : null}
     </div>
   );
@@ -326,5 +327,69 @@ function BalanceCard() {
         </Button>
       ) : null}
     </div>
+  );
+}
+
+const W_STATUS = {
+  requested: { label: "Queued", tone: "muted" },
+  pending: { label: "Sending", tone: "accent" },
+  success: { label: "Paid", tone: "brand" },
+  failed: { label: "Failed · refunded", tone: "error" },
+  reversed: { label: "Reversed · refunded", tone: "error" },
+} as const;
+
+/** Customer wallet withdrawals. Failures refund the wallet automatically; this is for follow-up. */
+function Withdrawals() {
+  const [onlyFailed, setOnlyFailed] = useState(false);
+  const rows = useQuery(api.ops.orders.withdrawals, onlyFailed ? { status: "failed" } : {});
+  return (
+    <section aria-labelledby="withdrawals" className="mt-12">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h2 id="withdrawals" className="text-heading font-semibold">
+          Withdrawals
+        </h2>
+        <label className="flex items-center gap-2 text-small text-ink-muted">
+          <input type="checkbox" checked={onlyFailed} onChange={(e) => setOnlyFailed(e.target.checked)} className="h-4 w-4" />
+          Failed only
+        </label>
+      </div>
+      {rows === undefined ? (
+        <Skeleton className="h-28" />
+      ) : rows.length === 0 ? (
+        <EmptyState title="No withdrawals" body="Customers withdraw wallet money to their saved bank account." />
+      ) : (
+        <div className="overflow-x-auto rounded-card border border-line bg-surface">
+          <table className="w-full text-left text-small">
+            <thead className="border-b border-line text-caption uppercase tracking-wider text-ink-muted">
+              <tr>
+                <th className="px-4 py-3 font-medium">When</th>
+                <th className="px-4 py-3 font-medium">Customer</th>
+                <th className="px-4 py-3 font-medium">To</th>
+                <th className="px-4 py-3 text-right font-medium">Amount</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {rows.map((w) => (
+                <tr key={w._id} className="align-top">
+                  <td className="tabular whitespace-nowrap px-4 py-3 text-ink-muted">{stamp(w.at)}</td>
+                  <td className="px-4 py-3">{w.customerName}</td>
+                  <td className="px-4 py-3">
+                    {w.name}
+                    <span className="tabular block text-caption text-ink-muted">{w.account}</span>
+                  </td>
+                  <td className="tabular px-4 py-3 text-right font-medium">{formatNaira(w.amount)}</td>
+                  <td className="px-4 py-3">
+                    <Pill tone={W_STATUS[w.status].tone}>{W_STATUS[w.status].label}</Pill>
+                    {w.failureReason ? <span className="mt-1 block max-w-56 text-caption text-ink-muted">{w.failureReason}</span> : null}
+                    <span className="mt-1 block font-mono text-[11px] text-ink-faint">{w.reference}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
