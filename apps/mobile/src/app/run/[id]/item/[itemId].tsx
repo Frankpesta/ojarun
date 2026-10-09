@@ -7,7 +7,7 @@ import { Image } from "expo-image";
 import { randomUUID } from "expo-crypto";
 import { useQuery } from "convex/react";
 import { useNetInfo } from "@react-native-community/netinfo";
-import { Camera } from "phosphor-react-native";
+import { Camera, ChatCircleDots } from "phosphor-react-native";
 import { api } from "@ojarun/convex/api";
 import type { Id } from "@ojarun/convex/dataModel";
 import { formatNaira } from "@ojarun/shared";
@@ -15,7 +15,9 @@ import { BackButton, Button, Input, Pressable, Skeleton, Sticker, Text, stickerF
 import { RoleGuard } from "@/features/auth/RoleGuard";
 import { FallbackTile } from "@/features/list/ItemSheet";
 import { CameraCapture } from "@/features/shopper/CameraCapture";
+import { CountdownRing, useSecondsLeft } from "@/features/chat/Countdown";
 import { PaySheet } from "@/features/shopper/PaySheet";
+import { PriceCheckSheet } from "@/features/shopper/PriceCheckSheet";
 import { PaymentsCard, paymentTotals } from "@/features/shopper/Payments";
 import { OrderBadge } from "@/features/shopper/orderBadge";
 import { deleteQueuedPhoto, prepareItemPhoto } from "@/features/shopper/photos";
@@ -73,6 +75,7 @@ function ShopItem() {
       key={item._id}
       batchId={batchId}
       marketId={batch.market?._id ?? null}
+      orderId={order._id}
       orderIndex={index}
       customerName={order.customer.firstName}
       orderCode={order.code}
@@ -100,6 +103,7 @@ type ItemData = {
 function ItemForm({
   batchId,
   marketId,
+  orderId,
   orderIndex,
   customerName,
   orderCode,
@@ -108,6 +112,7 @@ function ItemForm({
 }: {
   batchId: Id<"batches">;
   marketId: Id<"markets"> | null;
+  orderId: Id<"orders">;
   orderIndex: number;
   customerName: string;
   orderCode: string;
@@ -132,6 +137,13 @@ function ItemForm({
   const photoQueued = useRef(false);
   const paySheet = useSheet();
   const server = useQuery(api.transfers.forItem, { itemId: item._id });
+  const latestCheck = useQuery(api.priceChecks.latestForItem, { itemId: item._id });
+  const unread = useQuery(api.chat.unread, { orderId }) ?? 0;
+  const settings = useQuery(api.settings.publicSettings);
+  const checkSecondsLeft = useSecondsLeft(latestCheck?.state === "pending" ? latestCheck.expiresAt : null);
+  const checkPending = latestCheck?.state === "pending" && checkSecondsLeft > 0;
+  const pcSheet = useSheet();
+  const timeoutSec = settings?.priceCheckTimeoutSec ?? 300;
 
   const freshRef = useRef(fresh);
   freshRef.current = fresh;
@@ -211,12 +223,20 @@ function ItemForm({
         <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled" contentContainerClassName="gap-[18px] px-gutter pb-8" showsVerticalScrollIndicator={false}>
           <View className="flex-row items-center justify-between pt-2">
             <BackButton />
-            <View className="flex-row items-center gap-2 rounded-full border border-line bg-surface py-1 pl-1 pr-3">
+            <Pressable
+              onPress={() => router.push({ pathname: "/chat/[orderId]", params: { orderId } })}
+              accessibilityRole="button"
+              accessibilityLabel={`Chat with ${customerName}${unread ? `, ${unread} unread` : ""}`}
+              className="flex-row items-center gap-2 rounded-full border border-line bg-surface py-1 pl-1 pr-3"
+              style={{ minHeight: 44 }}
+            >
               <OrderBadge index={orderIndex} size={24} />
               <Text variant="smallStrong">
                 {customerName} · #{orderCode}
               </Text>
-            </View>
+              <ChatCircleDots size={18} color={colors.brand} weight="bold" />
+              {unread ? <View className="rounded-full bg-accent" style={{ width: 8, height: 8 }} /> : null}
+            </Pressable>
           </View>
 
           <View className="flex-row items-center gap-3.5">
@@ -305,6 +325,27 @@ function ItemForm({
           </View>
 
           <PaymentsCard batchId={batchId} itemId={item._id} itemName={item.name} cap={funded} server={server} queued={queuedPay} />
+          {checkPending && latestCheck ? (
+            <View className="flex-row items-center gap-3 rounded-card border-2 border-accent bg-surface p-3.5" accessibilityLiveRegion="polite">
+              <CountdownRing expiresAt={latestCheck.expiresAt} totalSec={timeoutSec} size={28} showLabel={false} />
+              <View className="flex-1">
+                <Text variant="bodyStrong" style={{ fontSize: 15 }}>
+                  Waiting for {customerName}
+                </Text>
+                <Text variant="small" tone="muted">
+                  Asked for {formatNaira(latestCheck.extraRequested)} more. If no answer, buy {formatNaira(latestCheck.budget)} worth.
+                </Text>
+              </View>
+            </View>
+          ) : latestCheck && latestCheck.state !== "pending" && Date.now() - (latestCheck.respondedAt ?? 0) < 30 * 60_000 ? (
+            <Text variant="smallStrong" tone={latestCheck.state === "approved" ? "brand" : "muted"}>
+              {latestCheck.state === "approved"
+                ? `${customerName} approved ${formatNaira(latestCheck.extraRequested)} more. You can pay up to ${formatNaira(funded)}.`
+                : latestCheck.state === "timed_out"
+                  ? `No answer from ${customerName}. Buy ${formatNaira(latestCheck.budget)} worth.`
+                  : `${customerName} said keep to ${formatNaira(latestCheck.budget)}.`}
+            </Text>
+          ) : null}
           {outcome !== "skipped" ? (
             <Button
               label={totals.paid + totals.sending > 0 ? (totals.left > 0 ? `Pay another ${formatNaira(totals.left)}` : "Budget used up") : "Pay the trader"}
@@ -313,6 +354,9 @@ function ItemForm({
               disabled={!photoUri || totals.left <= 0}
               onPress={() => paySheet.present()}
             />
+          ) : null}
+          {outcome !== "skipped" && !checkPending ? (
+            <Button label={`Costs more? Ask ${customerName}`} variant="ghost" onPress={() => pcSheet.present()} />
           ) : null}
 
           <View className="gap-2" accessibilityRole="radiogroup" accessibilityLabel="What happened?">
@@ -381,6 +425,12 @@ function ItemForm({
         paid={totals.paid + totals.sending}
         left={totals.left}
         beforePay={queueFreshPhoto}
+      />
+      <PriceCheckSheet
+        sheet={pcSheet}
+        item={{ _id: item._id, name: item.name, budget: item.budget, approvedExtra: item.approvedExtra }}
+        customerName={customerName}
+        timeoutMin={Math.round(timeoutSec / 60)}
       />
       <CameraCapture visible={cameraOpen} onClose={() => setCameraOpen(false)} onCaptured={(uri) => void onCaptured(uri)} />
     </View>

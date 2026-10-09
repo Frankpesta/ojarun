@@ -267,6 +267,21 @@ describe("price checks", () => {
     await check(s);
   });
 
+  it("feeds the customer's banner and the shopper's item screen", async () => {
+    const t = setup();
+    const s = await shopping(t);
+    expect(await s.c1.as.query(api.priceChecks.pendingForOrder, { orderId: s.c1.orderId })).toEqual([]);
+    const messageId = await check(s);
+    expect(await s.c1.as.query(api.priceChecks.pendingForOrder, { orderId: s.c1.orderId })).toMatchObject([
+      { _id: messageId, itemName: "Tomatoes", extraRequested: 800_00 },
+    ]);
+    expect(await s.ada.as.query(api.priceChecks.latestForItem, { itemId: s.tomatoes })).toMatchObject({ _id: messageId, state: "pending" });
+    await s.c1.as.mutation(api.priceChecks.respond, { messageId, decision: "within_budget" });
+    expect(await s.c1.as.query(api.priceChecks.pendingForOrder, { orderId: s.c1.orderId })).toEqual([]);
+    expect(await s.ada.as.query(api.priceChecks.latestForItem, { itemId: s.tomatoes })).toMatchObject({ state: "buy_within_budget" });
+    expect(await s.ada.as.query(api.priceChecks.latestForItem, { itemId: s.plantain })).toBeNull();
+  });
+
   it("is customer-only to answer and shopper-only to send", async () => {
     const t = setup();
     const s = await shopping(t);

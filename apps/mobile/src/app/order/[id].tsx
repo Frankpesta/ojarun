@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { Image } from "expo-image";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { CaretRight, ChatCircleDots } from "phosphor-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -20,6 +21,7 @@ import { fontFamily } from "@ojarun/ui";
 import { BackButton, Button, ItemStatusPill, Pressable, Sheet, Skeleton, Sticker, Text, stickerFor, useSheet } from "@/components";
 import { RoleGuard } from "@/features/auth/RoleGuard";
 import { FallbackTile } from "@/features/list/ItemSheet";
+import { CountdownRing, useSecondsLeft } from "@/features/chat/Countdown";
 import { useTheme } from "@/theme/ThemeProvider";
 
 type Order = NonNullable<FunctionReturnType<typeof api.orders.get>>;
@@ -153,6 +155,7 @@ function OrderDetail() {
         </View>
 
         <View className="gap-5 px-gutter pt-5">
+          <ChatEntry order={order} />
           <View className="gap-3">
             <View className="flex-row items-baseline justify-between">
               <Text variant="heading" accessibilityRole="header">
@@ -305,6 +308,75 @@ function itemLine(item: OrderItem): string {
         : `Budget ${formatNaira(funded)}${details ? ` · ${details}` : ""}`;
     }
   }
+}
+
+const CHAT_STATUSES: readonly OrderStatus[] = ["assigned", "shopping", "en_route", "arrived", "completed"];
+
+/**
+ * The way into the order chat, and a pepper banner while a price check waits on the customer
+ * (05 §6.3). Push and SMS for price checks arrive with notifications in M7.
+ */
+function ChatEntry({ order }: { order: Order }) {
+  const { colors } = useTheme();
+  const visible = CHAT_STATUSES.includes(order.status);
+  const unread = useQuery(api.chat.unread, visible ? { orderId: order._id } : "skip") ?? 0;
+  const pending = useQuery(api.priceChecks.pendingForOrder, visible ? { orderId: order._id } : "skip");
+  const settings = useQuery(api.settings.publicSettings);
+  const first = pending?.[0];
+  const left = useSecondsLeft(first?.expiresAt ?? null);
+  if (!visible) return null;
+  const shopper = order.shopperName ?? "your shopper";
+  const open = () => router.push({ pathname: "/chat/[orderId]", params: { orderId: order._id } });
+
+  if (first && left > 0) {
+    return (
+      <Pressable
+        onPress={open}
+        accessibilityRole="button"
+        accessibilityLabel={`${shopper} needs an answer: ${first.itemName} costs more today. Open chat`}
+        className="flex-row items-center gap-3 rounded-card border-2 border-accent bg-accent-tint p-4"
+      >
+        <CountdownRing expiresAt={first.expiresAt} totalSec={settings?.priceCheckTimeoutSec ?? 300} size={30} showLabel={false} />
+        <View className="flex-1 gap-0.5">
+          <Text variant="bodyStrong" className="font-extrabold">
+            {first.itemName} costs more today
+          </Text>
+          <Text variant="small" tone="accent" className="font-semibold">
+            {shopper} is asking for {formatNaira(first.extraRequested)} more. Answer now
+          </Text>
+        </View>
+        <CaretRight size={20} color={colors.accentStrong} weight="bold" />
+      </Pressable>
+    );
+  }
+
+  return (
+    <Pressable
+      onPress={open}
+      accessibilityRole="button"
+      accessibilityLabel={`Chat with ${shopper}${unread ? `, ${unread} unread` : ""}`}
+      className="flex-row items-center gap-3 rounded-card border border-line bg-surface p-3.5"
+    >
+      <View className="items-center justify-center rounded-full bg-brand-tint" style={{ width: 44, height: 44 }}>
+        <ChatCircleDots size={22} color={colors.brand} weight="bold" />
+      </View>
+      <View className="flex-1">
+        <Text variant="bodyStrong">{order.status === "completed" ? `Chat with ${shopper}` : `Message ${shopper}`}</Text>
+        <Text variant="small" tone="faint">
+          {unread ? `${unread} new ${unread === 1 ? "message" : "messages"}` : order.status === "completed" ? "See what was said" : "Ask for anything special, or call"}
+        </Text>
+      </View>
+      {unread ? (
+        <View className="items-center justify-center rounded-full bg-accent-strong px-2" style={{ minWidth: 24, height: 24 }}>
+          <Text variant="caption" tone="onBrand" className="font-extrabold">
+            {unread}
+          </Text>
+        </View>
+      ) : (
+        <CaretRight size={20} color={colors.inkFaint} weight="bold" />
+      )}
+    </Pressable>
+  );
 }
 
 function Line({ label, value }: { label: string; value: string }) {

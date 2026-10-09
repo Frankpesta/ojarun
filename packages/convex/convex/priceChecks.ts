@@ -3,7 +3,7 @@ import { formatNaira } from "@ojarun/shared";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
-import { customerMutation, shopperMutation } from "./lib/auth";
+import { customerMutation, customerQuery, shopperMutation, shopperQuery } from "./lib/auth";
 import { postSystem } from "./lib/chat";
 import { appError, ErrorCode } from "./lib/errors";
 import { getSettings } from "./lib/settings";
@@ -158,5 +158,43 @@ export const timeout = internalMutation({
     const message = await ctx.db.get(messageId);
     if (message?.priceCheck?.state !== "pending") return;
     await settle(ctx, message, "timed_out");
+  },
+});
+
+/** The newest price check on an item, for the shopper's item screen. */
+export const latestForItem = shopperQuery({
+  args: { itemId: v.id("orderItems") },
+  handler: async (ctx, { itemId }) => {
+    const item = await ctx.db.get(itemId);
+    const order = item ? await ctx.db.get(item.orderId) : null;
+    if (!item || !order || order.shopperId !== ctx.user._id) return null;
+    const rows = await ctx.db
+      .query("messages")
+      .withIndex("by_order", (q) => q.eq("orderId", order._id))
+      .filter((q) => q.eq(q.field("type"), "price_check"))
+      .collect();
+    const latest = rows.filter((m) => m.priceCheck?.itemId === itemId).at(-1);
+    return latest?.priceCheck ? { _id: latest._id, ...latest.priceCheck } : null;
+  },
+});
+
+/** Price checks waiting on the customer, for the banner on their order screen. */
+export const pendingForOrder = customerQuery({
+  args: { orderId: v.id("orders") },
+  handler: async (ctx, { orderId }) => {
+    const order = await ctx.db.get(orderId);
+    if (!order || order.customerId !== ctx.user._id) return [];
+    const rows = await ctx.db
+      .query("messages")
+      .withIndex("by_order", (q) => q.eq("orderId", orderId))
+      .filter((q) => q.eq(q.field("type"), "price_check"))
+      .collect();
+    const out = [];
+    for (const m of rows) {
+      if (m.priceCheck?.state !== "pending" || m.priceCheck.expiresAt <= Date.now()) continue;
+      const item = await ctx.db.get(m.priceCheck.itemId);
+      out.push({ _id: m._id, itemName: item?.name ?? "An item", extraRequested: m.priceCheck.extraRequested, expiresAt: m.priceCheck.expiresAt });
+    }
+    return out;
   },
 });

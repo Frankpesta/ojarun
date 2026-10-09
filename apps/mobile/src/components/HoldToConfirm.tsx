@@ -21,7 +21,8 @@ export type HoldToConfirmProps = {
   onConfirm: () => void;
   disabled?: boolean;
   loading?: boolean;
-  tone?: "brand" | "danger";
+  /** pepper: approving extra money for a price check. */
+  tone?: "brand" | "danger" | "pepper";
   size?: "md" | "lg";
 };
 
@@ -56,7 +57,7 @@ export function HoldToConfirm({
 
   const fillStyle = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
 
-  const track = tone === "danger" ? "bg-error" : "bg-brand";
+  const track = tone === "danger" ? "bg-error" : tone === "pepper" ? "bg-accent-strong" : "bg-brand";
 
   return (
     <Pressable

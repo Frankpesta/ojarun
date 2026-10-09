@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useNetInfo } from "@react-native-community/netinfo";
-import { CaretRight, Phone, Storefront, WifiSlash, CloudArrowUp } from "phosphor-react-native";
+import { CaretRight, ChatCircleDots, Phone, Storefront, WifiSlash, CloudArrowUp } from "phosphor-react-native";
 import { api } from "@ojarun/convex/api";
 import type { Id } from "@ojarun/convex/dataModel";
 import { formatLagosWindow, formatNaira, type ItemStatus } from "@ojarun/shared";
@@ -116,6 +116,7 @@ function BeforeStart({ batch }: { batch: Batch }) {
                     {order.address.landmark}
                   </Text>
                 </View>
+                <ChatButton orderId={order._id} name={order.customer.firstName} />
                 {order.customer.phone ? (
                   <Pressable
                     onPress={() => void Linking.openURL(`tel:${order.customer.phone}`)}
@@ -203,6 +204,12 @@ function ShoppingList({ batch }: { batch: Batch }) {
             <Text variant="smallStrong">
               {done.length} of {rows.length} done
             </Text>
+          </View>
+
+          <View className="flex-row flex-wrap gap-2">
+            {batch.orders.map((order, index) => (
+              <ChatChip key={order._id} orderId={order._id} name={order.customer.firstName} index={index} />
+            ))}
           </View>
 
           {waiting ? (
@@ -311,6 +318,54 @@ function ItemRow({ row, batchId, last }: { row: { item: Item; order: Order; inde
         {formatNaira(item.budget + item.approvedExtra)}
       </Text>
       <CaretRight size={16} color={colors.inkFaint} weight="bold" />
+    </Pressable>
+  );
+}
+
+const openChat = (orderId: string) => router.push({ pathname: "/chat/[orderId]", params: { orderId } });
+
+function UnreadDot() {
+  return <View className="absolute rounded-full border-2 border-surface bg-accent" style={{ width: 12, height: 12, top: 4, right: 4 }} />;
+}
+
+/** Round chat button beside the call button on an order card. */
+function ChatButton({ orderId, name }: { orderId: Id<"orders">; name: string }) {
+  const { colors } = useTheme();
+  const unread = useQuery(api.chat.unread, { orderId }) ?? 0;
+  return (
+    <Pressable
+      onPress={() => openChat(orderId)}
+      accessibilityRole="button"
+      accessibilityLabel={`Chat with ${name}${unread ? `, ${unread} unread` : ""}`}
+      className="items-center justify-center rounded-full bg-surface-sunken"
+      style={{ width: 44, height: 44 }}
+    >
+      <ChatCircleDots size={20} color={colors.forest} weight="bold" />
+      {unread ? <UnreadDot /> : null}
+    </Pressable>
+  );
+}
+
+/** One chip per customer while shopping: their letter, name and an unread dot. */
+function ChatChip({ orderId, name, index }: { orderId: Id<"orders">; name: string; index: number }) {
+  const { colors } = useTheme();
+  const unread = useQuery(api.chat.unread, { orderId }) ?? 0;
+  return (
+    <Pressable
+      onPress={() => openChat(orderId)}
+      accessibilityRole="button"
+      accessibilityLabel={`Chat with ${name}${unread ? `, ${unread} unread` : ""}`}
+      className={`flex-row items-center gap-2 rounded-full border bg-surface py-1 pl-1 pr-3 ${unread ? "border-accent" : "border-line"}`}
+      style={{ minHeight: 44 }}
+    >
+      <OrderBadge index={index} size={28} />
+      <Text variant="smallStrong">{name}</Text>
+      <ChatCircleDots size={18} color={unread ? colors.accentStrong : colors.inkMuted} weight="bold" />
+      {unread ? (
+        <Text variant="caption" tone="accent" className="font-extrabold">
+          {unread}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }
