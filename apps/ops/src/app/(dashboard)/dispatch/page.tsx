@@ -10,6 +10,7 @@ import { formatLagosDay, formatLagosTime, formatNaira } from "@ojarun/shared";
 import { Drawer } from "@/components/Drawer";
 import { Button, EmptyState, PageHeader, Pill } from "@/components/ui";
 import { errorMessage, FormError, ReasonField, reasonOk, Skeleton } from "@/components/form";
+import { CashRow } from "./cash";
 
 type SlotRow = FunctionReturnType<typeof api.ops.dispatch.slots>[number];
 type Board = NonNullable<FunctionReturnType<typeof api.ops.dispatch.board>>;
@@ -320,6 +321,7 @@ function MarketLane({
                   </Button>
                 ) : null}
               </footer>
+              <CashRow batch={b} budgets={b.orders.reduce((n, o) => n + o.budgets, 0)} />
             </article>
           );
         })}

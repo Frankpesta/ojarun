@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@ojarun/convex/api";
-import { formatLagosTime, formatNigerianPhone } from "@ojarun/shared";
+import { formatLagosTime, formatNaira, formatNigerianPhone } from "@ojarun/shared";
 import { Drawer } from "@/components/Drawer";
 import { Button, EmptyState, PageHeader, Pill } from "@/components/ui";
+import { BankAccountsDrawer } from "./bank";
 import { errorMessage, FormError, ReasonField, reasonOk, Skeleton } from "@/components/form";
 
 type Row = FunctionReturnType<typeof api.ops.shoppers.list>[number];
@@ -16,10 +17,12 @@ type Change = { shopper: Row; field: "onShift" | "active"; value: boolean };
 export default function ShoppersPage() {
   const shoppers = useQuery(api.ops.shoppers.list);
   const [change, setChange] = useState<Change | null>(null);
+  const [banksFor, setBanksFor] = useState<Row["_id"] | null>(null);
+  const banksRow = shoppers?.find((s) => s._id === banksFor) ?? null;
   const onShift = shoppers?.filter((s) => s.onShift).length ?? 0;
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-6xl">
       <PageHeader
         title="Shoppers"
         description="Who's on shift decides who gets proposed batches at cutoff. Shoppers switch themselves on in the app; you can do it here too."
@@ -49,6 +52,7 @@ export default function ShoppersPage() {
                   <th className="px-4 py-3 font-medium">Shopper</th>
                   <th className="px-4 py-3 font-medium">Phone</th>
                   <th className="px-4 py-3 font-medium">Last seen at market</th>
+                  <th className="px-4 py-3 font-medium">Money</th>
                   <th className="px-4 py-3 font-medium">Shift</th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -70,6 +74,9 @@ export default function ShoppersPage() {
                     <td className="tabular px-4 py-3 text-ink-muted">{s.phone ? formatNigerianPhone(s.phone) : "—"}</td>
                     <td className="tabular px-4 py-3 text-ink-muted">{s.lastLocation ? formatLagosTime(s.lastLocation.at) : "—"}</td>
                     <td className="px-4 py-3">
+                      <MoneyCell money={s.money} accounts={s.bankAccounts.length} />
+                    </td>
+                    <td className="px-4 py-3">
                       {!s.active ? (
                         <Pill tone="muted">Inactive</Pill>
                       ) : (
@@ -86,10 +93,15 @@ export default function ShoppersPage() {
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button size="sm" variant="secondary" onClick={() => setChange({ shopper: s, field: "active", value: !s.active })}>
-                        {s.active ? "Deactivate" : "Reactivate"}
-                      </Button>
+                    <td className="whitespace-nowrap px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => setBanksFor(s._id)}>
+                          Bank accounts
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => setChange({ shopper: s, field: "active", value: !s.active })}>
+                          {s.active ? "Deactivate" : "Reactivate"}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -99,6 +111,34 @@ export default function ShoppersPage() {
         </>
       )}
       {change ? <ChangeDrawer change={change} onClose={() => setChange(null)} /> : null}
+      {banksRow ? <BankAccountsDrawer shopper={banksRow} onClose={() => setBanksFor(null)} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Fraud signals (05 §6.5 step 5): cash share of spend, the same cash amount over and over,
+ * advances that didn't balance, blocked transfers, and no bank account saved to match against.
+ */
+function MoneyCell({ money, accounts }: { money: Row["money"]; accounts: number }) {
+  const flags: { label: string; tone: "error" | "accent" }[] = [];
+  if (money.varianceCount) {
+    flags.push({ label: `${money.varianceCount} cash ${money.varianceCount === 1 ? "variance" : "variances"} · ${formatNaira(money.varianceTotal)}`, tone: "error" });
+  }
+  if (money.blockedTransfers) flags.push({ label: `${money.blockedTransfers} blocked`, tone: "error" });
+  if (money.maxRepeatedCashAmount >= 3) flags.push({ label: `Same cash amount ×${money.maxRepeatedCashAmount}`, tone: "accent" });
+  if (!accounts) flags.push({ label: "No bank account saved", tone: "accent" });
+  const total = money.transferTotal + money.cashTotal;
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <span className="tabular text-ink-muted">
+        {total ? `${formatNaira(total)} · ${money.cashSharePct}% cash` : "No spend yet"}
+      </span>
+      {flags.map((f) => (
+        <Pill key={f.label} tone={f.tone}>
+          {f.label}
+        </Pill>
+      ))}
     </div>
   );
 }

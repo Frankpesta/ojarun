@@ -5,12 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignOutButton, UserButton } from "@clerk/nextjs";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import { Basket, CalendarDots, GearSix, IdentificationBadge, MapTrifold, Path, SignOut, Storefront, UsersThree } from "@phosphor-icons/react";
+import { ArrowsLeftRight, Basket, CalendarDots, GearSix, IdentificationBadge, MapTrifold, Path, SignOut, Storefront, UsersThree } from "@phosphor-icons/react";
 import { api } from "@ojarun/convex/api";
+import { AlertsBanner } from "@/components/AlertsBanner";
 import { EmptyState } from "@/components/ui";
 
 const NAV = [
   { href: "/dispatch", label: "Dispatch", icon: Path },
+  { href: "/transfers", label: "Transfers", icon: ArrowsLeftRight },
   { href: "/markets", label: "Markets", icon: Storefront },
   { href: "/slots", label: "Delivery slots", icon: CalendarDots },
   { href: "/catalog", label: "Catalogue", icon: Basket },
@@ -46,7 +48,12 @@ function OpsGate({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  return <>{children}</>;
+  return (
+    <>
+      <AlertsBanner />
+      {children}
+    </>
+  );
 }
 
 const WAT = new Intl.DateTimeFormat("en-NG", {
