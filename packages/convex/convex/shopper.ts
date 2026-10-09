@@ -3,6 +3,7 @@ import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { shopperMutation, shopperQuery } from "./lib/auth";
 import { appError, ErrorCode } from "./lib/errors";
+import { postSystem } from "./lib/chat";
 import { transitionOrder } from "./lib/stateMachine";
 import { orderCode } from "./orders";
 
@@ -175,12 +176,18 @@ export const startShopping = shopperMutation({
     const loc =
       lat !== undefined && lng !== undefined && Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 
-    const orders = await ctx.db
-      .query("orders")
-      .withIndex("by_batch", (q) => q.eq("batchId", batchId))
-      .collect();
+    const [orders, market] = await Promise.all([
+      ctx.db
+        .query("orders")
+        .withIndex("by_batch", (q) => q.eq("batchId", batchId))
+        .collect(),
+      ctx.db.get(b.marketId),
+    ]);
     for (const o of orders) {
-      if (o.status === "assigned") await transitionOrder(ctx, o, "shopping", { actorId: ctx.user._id, ...loc });
+      if (o.status === "assigned") {
+        await transitionOrder(ctx, o, "shopping", { actorId: ctx.user._id, ...loc });
+        await postSystem(ctx, o._id, `${ctx.user.name?.split(/\s+/)[0] ?? "Your shopper"} started shopping at ${market?.name ?? "the market"}`, `started:${o._id}`);
+      }
     }
     await ctx.db.patch(batchId, { status: "in_progress" });
     if (loc) {

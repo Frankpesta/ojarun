@@ -253,7 +253,15 @@ export default defineSchema({
     ),
   })
     .index("by_order", ["orderId"])
-    .index("by_clientRequestId", ["clientRequestId"]),
+    .index("by_clientRequestId", ["clientRequestId"])
+    .index("by_item_state", ["priceCheck.itemId", "priceCheck.state"]),
+
+  /** When each participant last opened an order's chat, for "Seen" and unread dots. */
+  chatReads: defineTable({
+    orderId: v.id("orders"),
+    userId: v.id("users"),
+    readAt: v.number(),
+  }).index("by_order_user", ["orderId", "userId"]),
 
   payments: defineTable({
     orderId: v.id("orders"),
