@@ -20,8 +20,9 @@ function constantTimeEqual(a: string, b: string): boolean {
 }
 
 /**
- * Paystack webhook (05 §6.1 step 5). Verifies the signature over the raw body, drops repeats,
- * then re-verifies the charge with Paystack in the background and answers 200 straight away.
+ * Paystack webhook (05 §6.1 step 5, §6.2 step 5). Verifies the signature over the raw body, drops
+ * repeats, then re-verifies the charge or transfer with Paystack in the background and answers
+ * 200 straight away.
  */
 http.route({
   path: "/paystack/webhook",
@@ -53,6 +54,9 @@ http.route({
     console.log({ evt: "webhook.received", event, reference });
     if (event === "charge.success" && reference.startsWith("ojr_")) {
       await ctx.scheduler.runAfter(0, internal.checkout.verifyReference, { reference });
+    } else if (event.startsWith("transfer.") && reference.startsWith("ojt_")) {
+      // transfer.success | transfer.failed | transfer.reversed: confirm with Paystack, then apply.
+      await ctx.scheduler.runAfter(0, internal.transfers.verify, { reference });
     }
     return new Response("ok", { status: 200 });
   }),

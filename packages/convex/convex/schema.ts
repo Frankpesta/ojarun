@@ -285,14 +285,38 @@ export default defineSchema({
     recipientCode: v.optional(v.string()),
     marketId: v.optional(v.id("markets")),
     firstSeenAt: v.number(),
+    lastPaidAt: v.optional(v.number()),
     transferCount: v.number(),
+    /** True until ops reviews a new recipient, and for any trader marked suspicious. */
     flagged: v.boolean(),
+    /** Why ops should look: a new recipient, or a name that partly matches a shopper's. */
+    flagReason: v.optional(v.string()),
+    /** "suspicious" blocks further transfers to this account. */
+    review: v.optional(v.union(v.literal("pending"), v.literal("approved"), v.literal("suspicious"))),
     reviewedBy: v.optional(v.id("users")),
     reviewedAt: v.optional(v.number()),
   })
     .index("by_account", ["bankCode", "accountNumber"])
     .index("by_flagged", ["flagged"])
     .index("by_market", ["marketId"]),
+
+  /** Paystack's Nigerian bank list, refreshed daily. One row. */
+  bankList: defineTable({
+    key: v.literal("NG"),
+    banks: v.array(v.object({ code: v.string(), name: v.string() })),
+    fetchedAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  /**
+   * Names Paystack returned for an account. A transfer request looks the name up here, so the
+   * client never supplies the name the fraud checks run on.
+   */
+  accountResolutions: defineTable({
+    bankCode: v.string(),
+    accountNumber: v.string(),
+    resolvedName: v.string(),
+    resolvedAt: v.number(),
+  }).index("by_account", ["bankCode", "accountNumber"]),
 
   traderTransfers: defineTable({
     orderId: v.id("orders"),
@@ -306,9 +330,16 @@ export default defineSchema({
     status: transferStatus,
     failureReason: v.optional(v.string()),
     newRecipient: v.boolean(),
+    /** The failed transfer this one retries; same item, trader and amount, new reference. */
+    retryOf: v.optional(v.id("traderTransfers")),
+    retriedBy: v.optional(v.id("traderTransfers")),
+    sentAt: v.optional(v.number()),
+    settledAt: v.optional(v.number()),
   })
     .index("by_item", ["itemId"])
     .index("by_status", ["status"])
+    .index("by_shopper", ["shopperId"])
+    .index("by_trader", ["traderId"])
     .index("by_clientRequestId", ["clientRequestId"])
     .index("by_reference", ["reference"]),
 
@@ -341,6 +372,7 @@ export default defineSchema({
   })
     .index("by_item", ["itemId"])
     .index("by_advance", ["advanceId"])
+    .index("by_shopper", ["shopperId"])
     .index("by_clientRequestId", ["clientRequestId"]),
 
   walletEntries: defineTable({
@@ -379,6 +411,35 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_reference", ["reference"])
     .index("by_clientRequestId", ["clientRequestId"]),
+
+  /**
+   * Things ops must look at, shown as a banner on the dashboard until resolved (SMS and email
+   * arrive in M7). `key` keeps one open alert per subject, e.g. "low_balance".
+   */
+  opsAlerts: defineTable({
+    key: v.string(),
+    kind: v.union(
+      v.literal("low_balance"),
+      v.literal("transfer_blocked"),
+      v.literal("transfer_failed"),
+      v.literal("transfer_reversed"),
+      v.literal("paystack_config"),
+    ),
+    severity: v.union(v.literal("critical"), v.literal("warning")),
+    message: v.string(),
+    transferId: v.optional(v.id("traderTransfers")),
+    resolvedAt: v.optional(v.number()),
+    resolvedBy: v.optional(v.id("users")),
+  })
+    .index("by_key", ["key"])
+    .index("by_resolvedAt", ["resolvedAt"]),
+
+  /** The last Paystack balance check. One row. */
+  paystackBalance: defineTable({
+    key: v.literal("NGN"),
+    balance: kobo,
+    checkedAt: v.number(),
+  }).index("by_key", ["key"]),
 
   priceGuide: defineTable({
     itemKey: v.string(),

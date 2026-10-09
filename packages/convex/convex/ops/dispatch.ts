@@ -7,6 +7,7 @@ import { getSettings } from "../lib/settings";
 import { transitionOrder } from "../lib/stateMachine";
 import { bearingOf, onShiftShoppers, proposeBatches } from "../batching";
 import { orderCode } from "../orders";
+import { cashSummary } from "./cash";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 
@@ -98,6 +99,7 @@ export const board = opsQuery({
           status: b.status,
           shopper: shopper ? { _id: shopper._id, name: shopper.name ?? "Shopper" } : null,
           orders: await Promise.all(orders.map((o) => orderCard(ctx, o, market))),
+          cash: await cashSummary(ctx, b._id, orders, settings.cashAdvanceSuggestPct),
         });
       }
       const unbatched = [];

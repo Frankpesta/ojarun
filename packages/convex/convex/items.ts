@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { canTransitionItem } from "@ojarun/shared";
-import type { MutationCtx } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { shopperMutation } from "./lib/auth";
 import { appError, ErrorCode } from "./lib/errors";
@@ -8,7 +8,7 @@ import { appError, ErrorCode } from "./lib/errors";
 const NOTE_MAX = 200;
 
 /** The item, if the caller is the shopper on its order and that order is being shopped. */
-async function itemForShopping(ctx: MutationCtx, shopper: Doc<"users">, itemId: Id<"orderItems">) {
+export async function itemForShopping(ctx: QueryCtx, shopper: Doc<"users">, itemId: Id<"orderItems">) {
   const item = await ctx.db.get(itemId);
   const order = item ? await ctx.db.get(item.orderId) : null;
   if (!item || !order || order.shopperId !== shopper._id) {

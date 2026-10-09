@@ -55,7 +55,15 @@ const SECTIONS: { title: string; description: string; fields: FieldDef[] }[] = [
       { path: "expectedShoppersPerSlot", label: "Shoppers expected per slot", kind: "int", hint: "Until shifts exist, capacity = per-shopper × this" },
       { path: "bookingDaysAhead", label: "Days customers can book ahead", kind: "int", hint: "0 = today only, 1 = today and tomorrow" },
       { path: "maxOrdersPerBatch", label: "Max orders per batch", kind: "int" },
-      { path: "cashAdvanceSuggestPct", label: "Suggested cash advance (%)", kind: "int" },
+    ],
+  },
+  {
+    title: "Trader payments",
+    description: "Safeguards on money shoppers send to traders.",
+    fields: [
+      { path: "cashAdvanceSuggestPct", label: "Suggested cash advance (%)", kind: "int", hint: "Share of the batch's item budgets" },
+      { path: "nameMatchBlockTokens", label: "Block when a trader shares this many name parts with a shopper", kind: "int", hint: "Fewer shared parts only flag the trader for review" },
+      { path: "paystackLowBalanceKobo", label: "Alert when the Paystack balance is below", kind: "naira" },
     ],
   },
   {

@@ -32,6 +32,10 @@ export const settingsSchema = z.object({
   refundPaystackChargeOnCancel: z.boolean(),
   maxOrdersPerBatch: z.number().int().positive(),
   cashAdvanceSuggestPct: z.number().int().min(0).max(100),
+  /** Shared name parts between a trader's account name and a shopper's that block a transfer. */
+  nameMatchBlockTokens: z.number().int().min(1).max(5),
+  /** Ops is alerted when the Paystack balance (checked every 30 min) drops below this. */
+  paystackLowBalanceKobo: kobo,
   paymentHoldMinutes: z.number().int().positive(),
   /** Stand-in for shift data: slot capacity = template capacityPerShopper × this. */
   expectedShoppersPerSlot: z.number().int().min(0),
@@ -79,6 +83,8 @@ export const DEFAULT_SETTINGS: Settings = {
   refundPaystackChargeOnCancel: false,
   maxOrdersPerBatch: 4,
   cashAdvanceSuggestPct: 30,
+  nameMatchBlockTokens: 2,
+  paystackLowBalanceKobo: 100_000_00,
   paymentHoldMinutes: 30,
   expectedShoppersPerSlot: 2,
   bookingDaysAhead: 1,

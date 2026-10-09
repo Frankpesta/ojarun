@@ -176,6 +176,13 @@ async function orderView(ctx: QueryCtx, order: Doc<"orders">) {
           note: i.note ?? null,
           status: i.status,
           amountSpent: i.amountSpent,
+          /** The part paid in cash, shown as "Paid in cash". The trader photo stays ops-only. */
+          paidInCash: (
+            await ctx.db
+              .query("cashSpends")
+              .withIndex("by_item", (q) => q.eq("itemId", i._id))
+              .collect()
+          ).reduce((s, c) => s + c.amount, 0),
           approvedExtra: i.approvedExtra,
           // Storage URLs are only handed out here, after the ownership check in `get`.
           photoUrl: i.photoStorageId ? await ctx.storage.getUrl(i.photoStorageId) : null,

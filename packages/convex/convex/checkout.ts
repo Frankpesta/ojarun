@@ -4,36 +4,13 @@ import { internal } from "./_generated/api";
 import { requireCallerInAction } from "./lib/actionAuth";
 import { appError, ErrorCode } from "./lib/errors";
 import { transitionOrder } from "./lib/stateMachine";
+import { paystack } from "./lib/paystack";
 import { postWalletEntry } from "./lib/wallet";
 
 /**
  * Paystack checkout (05 §6.1). Only the webhook and server-side verification change payment
  * state; the app's "browser closed" callback just asks the server to verify sooner.
  */
-const PAYSTACK = "https://api.paystack.co";
-
-function secretKey(): string {
-  const key = process.env.PAYSTACK_SECRET_KEY;
-  if (!key) throw appError(ErrorCode.UNAVAILABLE, "Payments aren't available right now. Try again shortly.");
-  return key;
-}
-
-async function paystack(path: string, init: RequestInit = {}): Promise<{ status: boolean; message?: string; data?: unknown }> {
-  let res: Response;
-  try {
-    res = await fetch(`${PAYSTACK}${path}`, {
-      ...init,
-      headers: { Authorization: `Bearer ${secretKey()}`, "Content-Type": "application/json", ...init.headers },
-    });
-  } catch {
-    throw appError(ErrorCode.UNAVAILABLE, "We couldn't reach Paystack. Check your connection and try again.");
-  }
-  const body = (await res.json().catch(() => ({}))) as { status?: boolean; message?: string; data?: unknown };
-  if (!res.ok || !body.status) {
-    console.error({ evt: "paystack.error", path: path.split("?")[0], status: res.status, message: body.message });
-  }
-  return { status: res.ok && !!body.status, message: body.message, data: body.data };
-}
 
 /** Starts a payment attempt: a fresh reference per attempt so a retry never reuses a dead one. */
 export const startAttempt = internalMutation({
