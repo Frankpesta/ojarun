@@ -5,6 +5,7 @@ import { useAction, useConvex, useMutation } from "convex/react";
 import type { FunctionArgs } from "convex/server";
 import { api } from "@ojarun/convex/api";
 import type { Id } from "@ojarun/convex/dataModel";
+import { track } from "@/lib/telemetry";
 
 type CreateArgs = FunctionArgs<typeof api.orders.create>;
 
@@ -40,7 +41,11 @@ export function usePayment() {
       }
       if (!orderId) {
         const created = await createOrder({ ...args, clientRequestId: Crypto.randomUUID() });
-        if (created.status === "paid") return { kind: "paid", orderId: created.orderId };
+        track("order_started", { items: args.items.length, budgets: args.items.reduce((s, i) => s + i.budget, 0), bufferPct: args.bufferPct });
+        if (created.status === "paid") {
+          track("order_paid", { via: "wallet" });
+          return { kind: "paid", orderId: created.orderId };
+        }
         orderId = created.orderId;
         pending.current = { orderId, signature };
       }
@@ -50,6 +55,7 @@ export function usePayment() {
       const status = await verify({ reference }).catch(() => "unknown");
       if (status === "success") {
         pending.current = null;
+        track("order_paid", { via: "paystack" });
         return { kind: "paid", orderId };
       }
       // The webhook may still land; check what the server has before calling it unfinished.

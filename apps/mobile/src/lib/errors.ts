@@ -12,7 +12,10 @@ const SERVER_COPY: Record<string, string> = {
   OUTSIDE_DELIVERY_AREA: "We only deliver within Akure for now. Try an address inside the city.",
   SLOT_FULL: "That delivery time just filled up. Pick another time.",
   SLOT_CLOSED: "Orders for that delivery time have closed. Pick a later time.",
+  RATE_LIMITED: "You're doing that too often. Wait a minute and try again.",
 };
+
+const PASS_THROUGH = new Set(["INVALID_INPUT", "INVALID_TRANSITION", "INSUFFICIENT_BALANCE", "UNAVAILABLE", "SLOT_CLOSED", "SLOT_FULL"]);
 
 const CLERK_COPY: Record<string, string> = {
   form_code_incorrect: "That code isn't right. Check the email and try again.",
@@ -35,7 +38,8 @@ export function clerkErrorCode(error: unknown): string | undefined {
 export function friendlyError(error: unknown, fallback = "Something didn't work. Check your connection and try again."): string {
   if (error instanceof ConvexError) {
     const data = error.data as { code?: string; message?: string } | undefined;
-    if (data?.code === "INVALID_INPUT" && data.message) return data.message;
+    // These carry copy written for the person on the other end (05 §7.5); show it as is.
+    if (data?.message && data.code && PASS_THROUGH.has(data.code)) return data.message;
     if (data?.code && SERVER_COPY[data.code]) return SERVER_COPY[data.code]!;
   }
   const clerkCode = clerkErrorCode(error);

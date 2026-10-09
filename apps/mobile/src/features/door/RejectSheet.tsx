@@ -8,6 +8,7 @@ import { Button, Chip, Input, Sheet, Sticker, Text, stickerFor, useToast, type S
 import { FallbackTile } from "@/features/list/ItemSheet";
 import { friendlyError } from "@/lib/errors";
 import { haptic } from "@/lib/haptics";
+import { track } from "@/lib/telemetry";
 
 const REASONS = ["Too soft or spoilt", "Wrong item", "Too small", "Not what I asked", "Something else"] as const;
 
@@ -44,6 +45,7 @@ export function RejectSheet({
     setSaving(true);
     try {
       await reject({ itemId: item._id, reason: full });
+      track("item_rejected", { reason: reason ?? "other", amount: item.amountSpent });
       haptic.warning();
       sheet.dismiss();
     } catch (e) {

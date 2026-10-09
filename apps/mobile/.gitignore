@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Firebase config is an EAS file variable, never committed (docs/push-setup.md)
+google-services.json
+*-firebase-adminsdk-*.json

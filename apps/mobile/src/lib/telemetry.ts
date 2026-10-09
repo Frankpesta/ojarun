@@ -48,3 +48,20 @@ export function trackScreen(pathname: string) {
 }
 
 export const wrapRoot = Sentry.wrap;
+
+/**
+ * Business events for the PostHog funnels (05 §9 M7). Amounts are kobo; never names, phones or
+ * free text.
+ */
+export type AnalyticsEvent =
+  | "order_started"
+  | "order_paid"
+  | "price_check_sent"
+  | "price_check_responded"
+  | "item_rejected"
+  | "order_completed"
+  | "withdrawal_requested";
+
+export function track(event: AnalyticsEvent, props: Record<string, string | number | boolean> = {}) {
+  posthog?.capture(event, { ...props, appEnv });
+}

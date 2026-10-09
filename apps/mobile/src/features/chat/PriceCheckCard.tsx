@@ -7,6 +7,7 @@ import { formatLagosClock, formatNaira } from "@ojarun/shared";
 import { Pressable, Text, useToast } from "@/components";
 import { friendlyError } from "@/lib/errors";
 import { haptic } from "@/lib/haptics";
+import { track } from "@/lib/telemetry";
 import { useTheme } from "@/theme/ThemeProvider";
 import { CountdownRing, useSecondsLeft } from "./Countdown";
 
@@ -52,6 +53,7 @@ export function PriceCheckCard({
     setBusy(true);
     try {
       await respond({ messageId: message._id, decision: "within_budget" });
+      track("price_check_responded", { decision: "within_budget", extra: pc.extraRequested });
       haptic.select();
     } catch (e) {
       toast.show({ message: friendlyError(e), tone: "error" });

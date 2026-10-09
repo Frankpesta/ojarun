@@ -9,6 +9,7 @@ import { Button, Input, MoneyInput, Pressable, Sheet, Sticker, Text, stickerFor,
 import { FallbackTile } from "@/features/list/ItemSheet";
 import { friendlyError } from "@/lib/errors";
 import { haptic } from "@/lib/haptics";
+import { track } from "@/lib/telemetry";
 
 /**
  * "Ask Funmi for more" (05 §6.3 step 1): today's price, what the budget gets instead, and the
@@ -64,6 +65,7 @@ export function PriceCheckSheet({
     try {
       await send({ clientRequestId: requestId, itemId: item._id, quoted, budgetGets: gets.trim(), extraRequested: extra });
       haptic.success();
+      track("price_check_sent", { extra, overBudgetPct: Math.round((gap / cap) * 100) });
       toast.show({ message: `Sent. ${customerName} has ${timeoutMin} minutes to answer.` });
       sheet.dismiss();
     } catch (e) {

@@ -27,6 +27,7 @@ import { ToastProvider } from "@/components";
 import { config, isConfigured } from "@/lib/config";
 import { useMe } from "@/features/auth/useSession";
 import { AnimatedSplash, useSplash } from "@/features/splash/AnimatedSplash";
+import { PushSetup } from "@/features/notifications/PushSetup";
 
 void SplashScreen.preventAutoHideAsync();
 // AnimatedSplash draws the same frame underneath, so the native splash can drop instantly.
@@ -69,6 +70,7 @@ function ThemedStack() {
     <>
       <StatusBar style={name === "dark" ? "light" : "dark"} />
       <ScreenTracker />
+      {convex ? <PushSetup /> : null}
       <Stack
         screenOptions={{
           headerShown: false,

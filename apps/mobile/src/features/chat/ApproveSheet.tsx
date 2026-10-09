@@ -7,6 +7,7 @@ import { Button, HoldToConfirm, Sheet, Sticker, Text, stickerFor, useToast, type
 import { FallbackTile } from "@/features/list/ItemSheet";
 import { friendlyError } from "@/lib/errors";
 import { haptic } from "@/lib/haptics";
+import { track } from "@/lib/telemetry";
 import { CountdownRing } from "./Countdown";
 import type { ChatMessage } from "./PriceCheckCard";
 
@@ -53,6 +54,7 @@ export function ApproveSheet({
     setBusy(true);
     try {
       const state = await respond({ messageId: message._id, decision });
+      track("price_check_responded", { decision, state, extra });
       if (state === "timed_out") toast.show({ message: `Time ran out, so ${shopperName} is buying within your budget.` });
       else if (decision === "approve") haptic.success();
       sheet.dismiss();

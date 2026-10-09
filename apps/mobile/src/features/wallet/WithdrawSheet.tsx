@@ -9,6 +9,7 @@ import { HoldToConfirm, MoneyInput, Pressable, Sheet, Text, useToast, type Sheet
 import { AccountForm, EMPTY_DRAFT, type AccountDraft } from "@/features/bank/AccountForm";
 import { friendlyError } from "@/lib/errors";
 import { haptic } from "@/lib/haptics";
+import { track } from "@/lib/telemetry";
 import { useTheme } from "@/theme/ThemeProvider";
 
 type Step = "amount" | "account" | "bank";
@@ -61,6 +62,7 @@ export function WithdrawSheet({ sheet, startWith = "amount" }: { sheet: SheetCon
     setBusy(true);
     try {
       await request({ clientRequestId: requestId, amount });
+      track("withdrawal_requested", { amount });
       haptic.success();
       sheet.dismiss();
       toast.show({ message: `${formatNaira(amount)} is on its way to your bank.` });

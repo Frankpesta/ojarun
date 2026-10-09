@@ -14,6 +14,7 @@ import { RejectSheet } from "@/features/door/RejectSheet";
 import { FallbackTile } from "@/features/list/ItemSheet";
 import { friendlyError } from "@/lib/errors";
 import { haptic } from "@/lib/haptics";
+import { track } from "@/lib/telemetry";
 import { useTheme } from "@/theme/ThemeProvider";
 
 type Inspect = NonNullable<FunctionReturnType<typeof api.delivery.inspect>>;
@@ -66,7 +67,8 @@ function Door() {
   const onAccept = async () => {
     setAccepting(true);
     try {
-      await accept({ orderId: id });
+      const credits = await accept({ orderId: id });
+      if (credits) track("order_completed", { leftover: credits.leftover, rejection: credits.rejection, items: data.items.length });
       haptic.success();
       router.replace({ pathname: "/receipt/[orderId]", params: { orderId: id } });
     } catch (e) {

@@ -22,6 +22,9 @@ const config: ExpoConfig = {
       monochromeImage: "./assets/android-icon-monochrome.png",
     },
     predictiveBackGestureEnabled: false,
+    // Firebase config for push (FCM). Uploaded as an EAS "file" environment variable; see
+    // docs/push-setup.md. Without it the app builds fine and push simply stays off.
+    ...(process.env.GOOGLE_SERVICES_JSON ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON } : {}),
     softwareKeyboardLayoutMode: "resize",
   },
   ios: {
@@ -36,6 +39,8 @@ const config: ExpoConfig = {
     ["expo-camera", { cameraPermission: "OjaRun uses the camera so your customer can see each item you buy.", microphonePermission: false, recordAudioAndroid: false }],
     // Foreground only (Play data-safety form): recorded when a shopper starts shopping or arrives.
     ["expo-location", { locationWhenInUsePermission: "OjaRun records where you are when you start shopping and when you arrive." }],
+    // Push: order updates, price checks, chat. Small icon must be a white silhouette.
+    ["expo-notifications", { icon: "./assets/android-icon-monochrome.png", color: "#15803D", defaultChannel: "default" }],
     // Android Maps SDK key, restricted to the package name + SHA-1. Set as an EAS secret.
     ["react-native-maps", { androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_ANDROID_KEY }],
     [
