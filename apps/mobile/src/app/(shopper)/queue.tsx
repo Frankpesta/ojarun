@@ -2,7 +2,7 @@ import { View } from "react-native";
 import { Image } from "expo-image";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { CheckCircle, CloudArrowUp, CloudCheck, Storefront, Warning, WifiSlash } from "phosphor-react-native";
-import { lagosDate } from "@ojarun/shared";
+import { formatNaira, lagosDate } from "@ojarun/shared";
 import { Button, EmptyState, Screen, Text } from "@/components";
 import { useUploadQueue, type QueueJob } from "@/features/shopper/useUploadQueue";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -17,6 +17,11 @@ function describe(job: QueueJob): string {
       return `${job.itemName} photo`;
     case "setOutcome":
       return `${job.itemName} · ${OUTCOME_LABEL[job.outcome]}`;
+    case "transfer":
+    case "retryTransfer":
+      return `${formatNaira(job.amount)} to ${job.traderName} · ${job.itemName}`;
+    case "cashSpend":
+      return `${formatNaira(job.amount)} cash · ${job.itemName}`;
   }
 }
 
@@ -65,7 +70,7 @@ export default function ShopperQueue() {
                       <View className="items-center justify-center rounded-xl bg-error-tint" style={{ width: 48, height: 48 }}>
                         <Warning size={22} color={colors.error} weight="bold" />
                       </View>
-                    ) : job.type === "uploadPhoto" ? (
+                    ) : job.type === "uploadPhoto" || job.type === "cashSpend" ? (
                       <Image source={{ uri: job.fileUri }} style={{ width: 48, height: 48, borderRadius: 12 }} contentFit="cover" />
                     ) : (
                       <View className="items-center justify-center rounded-xl bg-surface-sunken" style={{ width: 48, height: 48 }}>

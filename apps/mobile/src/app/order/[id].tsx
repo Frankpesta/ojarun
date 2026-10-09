@@ -279,6 +279,12 @@ function OrderDetail() {
   );
 }
 
+/** "Paid in cash" when the trader only took cash (05 §6.5 step 3). */
+function cashNote(item: OrderItem): string {
+  if (!item.paidInCash) return "";
+  return item.paidInCash >= item.amountSpent ? " · paid in cash" : ` · ${formatNaira(item.paidInCash)} in cash`;
+}
+
 /** One line under an item: what the shopper did once they've done it, otherwise the brief. */
 function itemLine(item: OrderItem): string {
   const funded = item.budget + item.approvedExtra;
@@ -288,14 +294,14 @@ function itemLine(item: OrderItem): string {
     case "bought":
     case "adjusted": {
       const got = item.quantityNote ? `Got ${item.quantityNote}` : item.status === "adjusted" ? "Changed" : "Bought";
-      const spent = item.amountSpent > 0 ? ` · ${formatNaira(item.amountSpent)} of ${formatNaira(funded)}` : "";
+      const spent = item.amountSpent > 0 ? ` · ${formatNaira(item.amountSpent)} of ${formatNaira(funded)}${cashNote(item)}` : "";
       const note = item.status === "adjusted" && item.shopperNote ? ` · ${item.shopperNote}` : "";
       return `${got}${spent}${note}`;
     }
     default: {
       const details = [...item.preferences, item.note].filter(Boolean).join(" · ");
       return item.amountSpent > 0
-        ? `${formatNaira(item.amountSpent)} of ${formatNaira(funded)}`
+        ? `${formatNaira(item.amountSpent)} of ${formatNaira(funded)}${cashNote(item)}`
         : `Budget ${formatNaira(funded)}${details ? ` · ${details}` : ""}`;
     }
   }

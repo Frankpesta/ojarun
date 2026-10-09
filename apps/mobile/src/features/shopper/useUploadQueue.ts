@@ -28,7 +28,33 @@ export type QueueJob = QueueJobBase &
         shopperNote?: string;
         quantityNote?: string;
       }
+    | {
+        /** The job id is the transfer's clientRequestId, so a replay never pays twice. */
+        type: "transfer";
+        itemId: Id<"orderItems">;
+        itemName: string;
+        recipient: TransferRecipient;
+        traderName: string;
+        amount: number;
+      }
+    | { type: "retryTransfer"; transferId: Id<"traderTransfers">; itemId: Id<"orderItems">; itemName: string; traderName: string; amount: number }
+    | {
+        /** The job id is the cash spend's clientRequestId. */
+        type: "cashSpend";
+        itemId: Id<"orderItems">;
+        itemName: string;
+        amount: number;
+        traderLabel?: string;
+        /** Trader photo, local JPEG until uploaded. */
+        fileUri: string;
+        storageId?: Id<"_storage">;
+      }
   );
+
+export type TransferRecipient = { traderId: Id<"traders"> } | { bankCode: string; accountNumber: string };
+
+/** A payment still on the phone: counts against the item's budget before the server has it. */
+export type QueuedPayment = Extract<QueueJob, { type: "transfer" | "retryTransfer" | "cashSpend" }>;
 
 type NewJob = QueueJob extends infer J ? (J extends QueueJob ? Omit<J, keyof QueueJobBase> : never) : never;
 
@@ -90,7 +116,7 @@ export const useUploadQueue = create<UploadQueue>()(
       discard: (id) =>
         set((s) => {
           const job = s.jobs.find((j) => j.id === id);
-          if (job?.type === "uploadPhoto") deleteQueuedPhoto(job.fileUri);
+          if (job?.type === "uploadPhoto" || job?.type === "cashSpend") deleteQueuedPhoto(job.fileUri);
           return { jobs: s.jobs.filter((j) => j.id !== id) };
         }),
       recover: () => set((s) => ({ jobs: s.jobs.map((j) => (j.status === "running" ? { ...j, status: "pending" } : j)) })),
@@ -115,6 +141,10 @@ export function queuedPhoto(jobs: readonly QueueJob[], itemId: string) {
   for (const j of jobs) if (j.type === "uploadPhoto" && j.itemId === itemId) found = j;
   return found;
 }
+
+/** Payments for an item still waiting to send, oldest first. */
+export const queuedPayments = (jobs: readonly QueueJob[], itemId: string): QueuedPayment[] =>
+  jobs.filter((j): j is QueuedPayment => (j.type === "transfer" || j.type === "retryTransfer" || j.type === "cashSpend") && j.itemId === itemId);
 
 /** Start shopping is queued but not sent: treat the run as started. */
 export const startQueued = (jobs: readonly QueueJob[], batchId: string) =>

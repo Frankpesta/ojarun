@@ -18,6 +18,20 @@ const PERMANENT = new Set(["INVALID_INPUT", "INVALID_TRANSITION", "NOT_FOUND", "
 
 class TransientError extends Error {}
 
+/** Uploads a queued JPEG to Convex storage and returns its id. */
+async function upload(convex: ConvexReactClient, fileUri: string): Promise<Id<"_storage">> {
+  const file = new File(fileUri);
+  if (!file.exists) throw new ConvexError({ code: "INVALID_INPUT", message: "The photo is missing from this phone. Take it again." });
+  const url = await convex.mutation(api.items.generateUploadUrl, {});
+  const res = await file.upload(url, {
+    httpMethod: "POST",
+    uploadType: UploadType.BINARY_CONTENT,
+    headers: { "Content-Type": "image/jpeg" },
+  });
+  if (res.status < 200 || res.status >= 300) throw new TransientError(`Upload failed (${res.status})`);
+  return (JSON.parse(res.body) as { storageId: Id<"_storage"> }).storageId;
+}
+
 async function perform(convex: ConvexReactClient, job: QueueJob): Promise<void> {
   const queue = useUploadQueue.getState();
   switch (job.type) {
@@ -33,21 +47,34 @@ async function perform(convex: ConvexReactClient, job: QueueJob): Promise<void> 
       });
       return;
     case "uploadPhoto": {
-      let storageId = job.storageId;
-      if (!storageId) {
-        const file = new File(job.fileUri);
-        if (!file.exists) throw new ConvexError({ code: "INVALID_INPUT", message: "The photo is missing from this phone. Take it again." });
-        const url = await convex.mutation(api.items.generateUploadUrl, {});
-        const res = await file.upload(url, {
-          httpMethod: "POST",
-          uploadType: UploadType.BINARY_CONTENT,
-          headers: { "Content-Type": "image/jpeg" },
-        });
-        if (res.status < 200 || res.status >= 300) throw new TransientError(`Upload failed (${res.status})`);
-        storageId = (JSON.parse(res.body) as { storageId: Id<"_storage"> }).storageId;
-        queue.patch(job.id, { storageId });
-      }
+      const storageId = job.storageId ?? (await upload(convex, job.fileUri));
+      queue.patch(job.id, { storageId });
       await convex.mutation(api.items.attachPhoto, { itemId: job.itemId, storageId });
+      deleteQueuedPhoto(job.fileUri);
+      return;
+    }
+    case "transfer":
+      // A blocked transfer comes back as a result, not an error: the item screen shows it.
+      await convex.mutation(api.transfers.requestTraderTransfer, {
+        clientRequestId: job.id,
+        itemId: job.itemId,
+        recipient: job.recipient,
+        amount: job.amount,
+      });
+      return;
+    case "retryTransfer":
+      await convex.mutation(api.transfers.retry, { clientRequestId: job.id, transferId: job.transferId });
+      return;
+    case "cashSpend": {
+      const storageId = job.storageId ?? (await upload(convex, job.fileUri));
+      queue.patch(job.id, { storageId });
+      await convex.mutation(api.cash.recordCashSpend, {
+        clientRequestId: job.id,
+        itemId: job.itemId,
+        amount: job.amount,
+        traderPhotoId: storageId,
+        traderLabel: job.traderLabel,
+      });
       deleteQueuedPhoto(job.fileUri);
       return;
     }

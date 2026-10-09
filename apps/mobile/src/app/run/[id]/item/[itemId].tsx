@@ -11,13 +11,15 @@ import { Camera } from "phosphor-react-native";
 import { api } from "@ojarun/convex/api";
 import type { Id } from "@ojarun/convex/dataModel";
 import { formatNaira } from "@ojarun/shared";
-import { BackButton, Button, Input, Pressable, Skeleton, Sticker, Text, stickerFor, useToast } from "@/components";
+import { BackButton, Button, Input, Pressable, Skeleton, Sticker, Text, stickerFor, useSheet, useToast } from "@/components";
 import { RoleGuard } from "@/features/auth/RoleGuard";
 import { FallbackTile } from "@/features/list/ItemSheet";
 import { CameraCapture } from "@/features/shopper/CameraCapture";
+import { PaySheet } from "@/features/shopper/PaySheet";
+import { PaymentsCard, paymentTotals } from "@/features/shopper/Payments";
 import { OrderBadge } from "@/features/shopper/orderBadge";
 import { deleteQueuedPhoto, prepareItemPhoto } from "@/features/shopper/photos";
-import { queuedOutcome, queuedPhoto, useUploadQueue, type ItemOutcome } from "@/features/shopper/useUploadQueue";
+import { queuedOutcome, queuedPayments, queuedPhoto, useUploadQueue, type ItemOutcome } from "@/features/shopper/useUploadQueue";
 import { haptic } from "@/lib/haptics";
 import { useTheme } from "@/theme/ThemeProvider";
 
@@ -70,6 +72,7 @@ function ShopItem() {
     <ItemForm
       key={item._id}
       batchId={batchId}
+      marketId={batch.market?._id ?? null}
       orderIndex={index}
       customerName={order.customer.firstName}
       orderCode={order.code}
@@ -96,6 +99,7 @@ type ItemData = {
 
 function ItemForm({
   batchId,
+  marketId,
   orderIndex,
   customerName,
   orderCode,
@@ -103,6 +107,7 @@ function ItemForm({
   initial,
 }: {
   batchId: Id<"batches">;
+  marketId: Id<"markets"> | null;
   orderIndex: number;
   customerName: string;
   orderCode: string;
@@ -123,13 +128,17 @@ function ItemForm({
   // A new photo taken on this visit: shrunk and on disk, queued only when the shopper saves.
   const [fresh, setFresh] = useState<{ jobId: string; uri: string } | null>(null);
   const saved = useRef(false);
+  // The fresh photo joined the queue early, because a payment needed it before Save.
+  const photoQueued = useRef(false);
+  const paySheet = useSheet();
+  const server = useQuery(api.transfers.forItem, { itemId: item._id });
 
   const freshRef = useRef(fresh);
   freshRef.current = fresh;
   // Leaving without saving: drop the photo taken on this visit so it never uploads.
   useEffect(
     () => () => {
-      if (!saved.current && freshRef.current) deleteQueuedPhoto(freshRef.current.uri);
+      if (!saved.current && !photoQueued.current && freshRef.current) deleteQueuedPhoto(freshRef.current.uri);
     },
     [],
   );
@@ -137,12 +146,21 @@ function ItemForm({
   const pendingPhoto = queuedPhoto(jobs, item._id);
   const photoUri = fresh?.uri ?? pendingPhoto?.fileUri ?? item.photoUrl;
   const funded = item.budget + item.approvedExtra;
+  const queuedPay = queuedPayments(jobs, item._id);
+  const totals = paymentTotals(server, queuedPay, funded, item.amountSpent);
+
+  const queueFreshPhoto = () => {
+    if (!fresh || photoQueued.current) return;
+    enqueue(batchId, { type: "uploadPhoto", itemId: item._id, itemName: item.name, fileUri: fresh.uri }, fresh.jobId);
+    photoQueued.current = true;
+  };
 
   const onCaptured = async (raw: string) => {
     setCameraOpen(false);
     setProcessing(true);
     try {
-      if (fresh) deleteQueuedPhoto(fresh.uri);
+      if (fresh && !photoQueued.current) deleteQueuedPhoto(fresh.uri);
+      photoQueued.current = false;
       const jobId = randomUUID();
       setFresh({ jobId, uri: await prepareItemPhoto(raw, jobId) });
       haptic.success();
@@ -163,15 +181,13 @@ function ItemForm({
         ? outcome === "skipped"
           ? `Tell ${customerName} why it isn't there`
           : `Tell ${customerName} what you changed`
-        : outcome === "skipped" && item.amountSpent > 0
+        : outcome === "skipped" && totals.paid + totals.sending > 0
           ? "Money was already paid for this item"
           : null;
 
   const save = () => {
     if (blocker || !outcome) return;
-    if (fresh) {
-      enqueue(batchId, { type: "uploadPhoto", itemId: item._id, itemName: item.name, fileUri: fresh.uri }, fresh.jobId);
-    }
+    queueFreshPhoto();
     enqueue(batchId, {
       type: "setOutcome",
       itemId: item._id,
@@ -288,6 +304,17 @@ function ItemForm({
             )}
           </View>
 
+          <PaymentsCard batchId={batchId} itemId={item._id} itemName={item.name} cap={funded} server={server} queued={queuedPay} />
+          {outcome !== "skipped" ? (
+            <Button
+              label={totals.paid + totals.sending > 0 ? (totals.left > 0 ? `Pay another ${formatNaira(totals.left)}` : "Budget used up") : "Pay the trader"}
+              variant={totals.paid + totals.sending > 0 ? "secondary" : "primary"}
+              size="lg"
+              disabled={!photoUri || totals.left <= 0}
+              onPress={() => paySheet.present()}
+            />
+          ) : null}
+
           <View className="gap-2" accessibilityRole="radiogroup" accessibilityLabel="What happened?">
             <Text variant="smallStrong" tone="muted">
               What happened?
@@ -346,6 +373,15 @@ function ItemForm({
           </View>
         </KeyboardAwareScrollView>
       </SafeAreaView>
+      <PaySheet
+        sheet={paySheet}
+        batchId={batchId}
+        marketId={marketId}
+        item={{ _id: item._id, name: item.name, budget: item.budget, approvedExtra: item.approvedExtra, photoUri }}
+        paid={totals.paid + totals.sending}
+        left={totals.left}
+        beforePay={queueFreshPhoto}
+      />
       <CameraCapture visible={cameraOpen} onClose={() => setCameraOpen(false)} onCaptured={(uri) => void onCaptured(uri)} />
     </View>
   );

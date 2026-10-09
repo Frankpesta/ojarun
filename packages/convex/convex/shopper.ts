@@ -147,7 +147,7 @@ export const batch = shopperQuery({
     return {
       _id: b._id,
       status: b.status,
-      market: market ? { name: market.name, lat: market.lat, lng: market.lng } : null,
+      market: market ? { _id: market._id, name: market.name, lat: market.lat, lng: market.lng } : null,
       window: slot ? { start: slot.windowStart, end: slot.windowEnd, date: slot.date } : null,
       orders: outOrders,
     };
