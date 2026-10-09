@@ -34,7 +34,7 @@ export function SignOutSheet({ sheet }: { sheet: SheetController }) {
       }
     >
       <Text variant="body" tone="muted">
-        You'll need a new SMS code to sign back in. Your orders and wallet stay safe.
+        You'll need a new code from your email to sign back in. Your orders and wallet stay safe.
       </Text>
     </Sheet>
   );

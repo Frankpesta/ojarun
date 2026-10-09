@@ -110,8 +110,12 @@ export const inspect = customerQuery({
       .query("orderItems")
       .withIndex("by_order", (q) => q.eq("orderId", orderId))
       .collect();
+    const shopper = order.shopperId ? await ctx.db.get(order.shopperId) : null;
     return {
       status: order.status,
+      shopperName: shopper?.name?.split(/\s+/)[0] ?? "Your shopper",
+      buffer: order.totals.buffer,
+      bufferUsed: order.bufferUsed,
       items: await Promise.all(
         items
           .sort((a, b) => a.position - b.position)

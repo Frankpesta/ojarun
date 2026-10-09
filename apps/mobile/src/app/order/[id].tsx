@@ -9,6 +9,7 @@ import type { FunctionReturnType } from "convex/server";
 import { api } from "@ojarun/convex/api";
 import type { Id } from "@ojarun/convex/dataModel";
 import {
+  CANCELLABLE_STATUSES,
   formatLagosClock,
   formatLagosDay,
   formatLagosWindow,
@@ -22,6 +23,7 @@ import { BackButton, Button, ItemStatusPill, Pressable, Sheet, Skeleton, Sticker
 import { RoleGuard } from "@/features/auth/RoleGuard";
 import { FallbackTile } from "@/features/list/ItemSheet";
 import { CountdownRing, useSecondsLeft } from "@/features/chat/Countdown";
+import { CancelSheet } from "@/features/orders/CancelSheet";
 import { useTheme } from "@/theme/ThemeProvider";
 
 type Order = NonNullable<FunctionReturnType<typeof api.orders.get>>;
@@ -79,6 +81,7 @@ function OrderDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const order = useQuery(api.orders.get, id ? { orderId: id as Id<"orders"> } : "skip");
   const photoSheet = useSheet();
+  const cancelSheet = useSheet();
   const [viewing, setViewing] = useState<OrderItem | null>(null);
 
   if (order === undefined) {
@@ -155,6 +158,30 @@ function OrderDetail() {
         </View>
 
         <View className="gap-5 px-gutter pt-5">
+          {order.status === "arrived" ? (
+            <Pressable
+              onPress={() => router.push({ pathname: "/door/[orderId]", params: { orderId: order._id } })}
+              accessibilityRole="button"
+              className="flex-row items-center gap-3 rounded-card bg-brand p-4"
+            >
+              <View className="flex-1 gap-0.5">
+                <Text variant="bodyStrong" tone="onBrand" className="font-extrabold">
+                  {order.shopperName ?? "Your shopper"} is at your door
+                </Text>
+                <Text variant="small" tone="onBrand">
+                  Check your items, then accept the delivery
+                </Text>
+              </View>
+              <CaretRight size={20} color={colors.onBrand} weight="bold" />
+            </Pressable>
+          ) : null}
+          {order.status === "completed" ? (
+            <Button
+              label="See your receipt"
+              variant="secondary"
+              onPress={() => router.push({ pathname: "/receipt/[orderId]", params: { orderId: order._id } })}
+            />
+          ) : null}
           <ChatEntry order={order} />
           <View className="gap-3">
             <View className="flex-row items-baseline justify-between">
@@ -251,8 +278,12 @@ function OrderDetail() {
               ))}
             </View>
           </View>
+          {CANCELLABLE_STATUSES.includes(order.status) ? (
+            <Button label="Cancel order" variant="ghost" onPress={() => cancelSheet.present()} />
+          ) : null}
         </View>
       </ScrollView>
+      {CANCELLABLE_STATUSES.includes(order.status) ? <CancelSheet sheet={cancelSheet} orderId={order._id} shopperName={order.shopperName} /> : null}
 
       <Sheet
         sheet={photoSheet}

@@ -3,12 +3,13 @@ import { View } from "react-native";
 import { router } from "expo-router";
 import { BookOpenText, ChatCircleText, MapPin, Moon, Palette, SignOut } from "phosphor-react-native";
 import { formatNigerianPhone } from "@ojarun/shared";
-import { Divider, ListItem, Screen, Text, useSheet } from "@/components";
+import { Divider, ListItem, Pressable, Screen, Text, useSheet } from "@/components";
 import { useMe } from "@/features/auth/useSession";
 import { HowItWorksSheet } from "@/features/home/HowItWorksSheet";
 import { useThemePreference } from "@/theme/ThemeProvider";
 import { THEME_LABEL, ThemeSheet } from "./ThemeSheet";
 import { SupportSheet } from "./SupportSheet";
+import { DeleteAccountSheet } from "./DeleteAccountSheet";
 import { SignOutSheet } from "./SignOutSheet";
 
 function Group({ title, children }: { title: string; children: ReactNode[] }) {
@@ -36,6 +37,7 @@ export function AccountScreen({ audience }: { audience: "customer" | "shopper" }
   const themeSheet = useSheet();
   const supportSheet = useSheet();
   const signOutSheet = useSheet();
+  const deleteSheet = useSheet();
   const howItWorks = useSheet();
 
   const initials = (me?.name ?? "")
@@ -117,11 +119,19 @@ export function AccountScreen({ audience }: { audience: "customer" | "shopper" }
         <View className="rounded-card border-[1.5px] border-line-strong px-4">
           <ListItem icon={SignOut} title="Sign out" destructive onPress={signOutSheet.present} />
         </View>
+        {audience === "customer" ? (
+          <Pressable onPress={deleteSheet.present} accessibilityRole="button" className="items-center py-2">
+            <Text variant="small" tone="faint" className="underline">
+              Delete my account
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <ThemeSheet sheet={themeSheet} />
       <SupportSheet sheet={supportSheet} audience={audience} />
       <SignOutSheet sheet={signOutSheet} />
+      {audience === "customer" ? <DeleteAccountSheet sheet={deleteSheet} onWithdraw={() => router.navigate("/wallet")} /> : null}
       {audience === "customer" ? <HowItWorksSheet sheet={howItWorks} /> : null}
     </Screen>
   );

@@ -162,7 +162,8 @@ export const saveResolution = internalMutation({
 export const resolveAccount = action({
   args: { accountNumber: v.string(), bankCode: v.string() },
   handler: async (ctx, args): Promise<{ accountNumber: string; accountName: string; bankName: string }> => {
-    await requireCallerInAction(ctx, ["shopper", "ops"]);
+    // Customers look up their own payout account; shoppers, traders; ops, shoppers' accounts.
+    await requireCallerInAction(ctx, ["customer", "shopper", "ops"]);
     return await ctx.runAction(internal.traders.resolve, args);
   },
 });

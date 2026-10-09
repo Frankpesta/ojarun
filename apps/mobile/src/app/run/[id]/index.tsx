@@ -2,14 +2,15 @@ import { useState } from "react";
 import { Linking, ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useNetInfo } from "@react-native-community/netinfo";
-import { CaretRight, ChatCircleDots, Phone, Storefront, WifiSlash, CloudArrowUp } from "phosphor-react-native";
+import { CaretRight, ChatCircleDots, CheckCircle, MapPin, Phone, Storefront, WifiSlash, CloudArrowUp } from "phosphor-react-native";
 import { api } from "@ojarun/convex/api";
 import type { Id } from "@ojarun/convex/dataModel";
 import { formatLagosWindow, formatNaira, type ItemStatus } from "@ojarun/shared";
-import { BackButton, Button, Pressable, Skeleton, Sticker, Text, stickerFor } from "@/components";
+import { BackButton, Button, Pressable, Skeleton, Sticker, Text, stickerFor, useToast } from "@/components";
+import { friendlyError } from "@/lib/errors";
 import { RoleGuard } from "@/features/auth/RoleGuard";
 import { FallbackTile } from "@/features/list/ItemSheet";
 import { currentLocation } from "@/features/shopper/location";
@@ -55,7 +56,9 @@ function Run() {
       </SafeAreaView>
     );
   }
-  const started = batch.status === "in_progress" || startQueued(jobs, batch._id);
+  const started = batch.status === "in_progress" || batch.status === "done" || startQueued(jobs, batch._id);
+  const delivering = batch.orders.length > 0 && batch.orders.every((o) => o.status === "en_route" || o.status === "arrived" || o.status === "completed");
+  if (delivering) return <Deliveries batch={batch} />;
   return started ? <ShoppingList batch={batch} /> : <BeforeStart batch={batch} />;
 }
 
@@ -169,6 +172,21 @@ function ShoppingList({ batch }: { batch: Batch }) {
   const jobs = useUploadQueue((s) => s.jobs);
   const { isConnected } = useNetInfo();
   const [tab, setTab] = useState<"todo" | "done">("todo");
+  const toast = useToast();
+  const enRoute = useMutation(api.delivery.enRoute);
+  const [leaving, setLeaving] = useState(false);
+  const headOut = async () => {
+    setLeaving(true);
+    try {
+      const here = await currentLocation();
+      await enRoute({ batchId: batch._id, ...here });
+      haptic.success();
+    } catch (e) {
+      toast.show({ message: friendlyError(e), tone: "error" });
+    } finally {
+      setLeaving(false);
+    }
+  };
 
   const rows = batch.orders.flatMap((order, index) =>
     order.items.map((item) => {
@@ -273,13 +291,15 @@ function ShoppingList({ batch }: { batch: Batch }) {
       </SafeAreaView>
 
       <SafeAreaView edges={["bottom"]} className="gap-2.5 border-t border-line bg-surface px-gutter pt-3.5 pb-3">
-        <Button label="Head out to deliver" size="lg" disabled />
+        <Button label="Head out to deliver" size="lg" disabled={todo.length > 0 || waiting > 0 || offline} loading={leaving} onPress={() => void headOut()} />
         <Text variant="small" tone="faint" className="text-center">
           {todo.length
             ? `Finish all ${rows.length} items${waiting ? " and wait for uploads" : ""} first`
             : waiting
               ? "Waiting for uploads to finish"
-              : "Delivery steps arrive in the next app update"}
+              : offline
+                ? "Get a signal to head out"
+                : `${batch.orders.length} ${batch.orders.length === 1 ? "delivery" : "deliveries"} to make`}
         </Text>
       </SafeAreaView>
     </View>
@@ -366,6 +386,124 @@ function ChatChip({ orderId, name, index }: { orderId: Id<"orders">; name: strin
           {unread}
         </Text>
       ) : null}
+    </Pressable>
+  );
+}
+
+const isDelivered = (status: string) => status === "completed";
+
+/** After heading out: one card per stop, the next one open (approved "Deliveries" frame). */
+function Deliveries({ batch }: { batch: Batch }) {
+  const { colors } = useTheme();
+  const toast = useToast();
+  const arrivedMutation = useMutation(api.delivery.arrived);
+  const [busy, setBusy] = useState<string | null>(null);
+  const done = batch.orders.filter((o) => isDelivered(o.status)).length;
+  const next = batch.orders.find((o) => o.status === "arrived") ?? batch.orders.find((o) => o.status === "en_route");
+
+  const arrive = async (orderId: Id<"orders">) => {
+    setBusy(orderId);
+    try {
+      const here = await currentLocation();
+      await arrivedMutation({ orderId, ...here });
+      haptic.success();
+      router.push({ pathname: "/run/[id]/door/[orderId]", params: { id: batch._id, orderId } });
+    } catch (e) {
+      toast.show({ message: friendlyError(e), tone: "error" });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <ScrollView className="flex-1 bg-bg" contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+      <View className="bg-forest" style={{ borderBottomLeftRadius: 28, borderBottomRightRadius: 28 }}>
+        <SafeAreaView edges={["top"]} className="gap-3.5 px-gutter pb-[22px] pt-2">
+          <BackButton tone="onForest" />
+          <Text variant="smallStrong" tone="forestMuted">
+            {batch.market?.name ?? "Market"} · {windowLabel(batch)}
+          </Text>
+          <Text variant="title" tone="onForest" accessibilityRole="header" style={{ fontSize: 28, lineHeight: 33 }}>
+            {done === batch.orders.length ? "All delivered" : "On the way"}
+          </Text>
+          <View className="flex-row gap-1.5" accessible accessibilityLabel={`${done} of ${batch.orders.length} delivered`}>
+            {batch.orders.map((o) => (
+              <View key={o._id} className={`h-1.5 flex-1 rounded-full ${isDelivered(o.status) ? "bg-live" : "bg-on-forest/20"}`} />
+            ))}
+          </View>
+          <Text variant="small" tone="onForestSoft">
+            {done} of {batch.orders.length} delivered
+          </Text>
+        </SafeAreaView>
+      </View>
+
+      <View className="gap-3 px-gutter pt-5">
+        {batch.orders.map((order, index) => {
+          const isNext = order._id === next?._id;
+          const delivered = isDelivered(order.status);
+          const atDoor = order.status === "arrived";
+          return (
+            <View
+              key={order._id}
+              className={`gap-3.5 rounded-[22px] bg-surface p-4 ${delivered ? "opacity-60" : ""}`}
+              style={{ borderWidth: isNext ? 2 : 1, borderColor: isNext ? colors.brand : colors.line }}
+            >
+              <View className="flex-row items-center gap-3">
+                <OrderBadge index={index} />
+                <View className="flex-1 gap-0.5">
+                  <Text variant="bodyStrong" className={isNext ? "font-extrabold" : ""} numberOfLines={1}>
+                    {order.customer.firstName} · #{order.code}
+                  </Text>
+                  <Text variant="small" tone={delivered ? "brand" : "muted"} numberOfLines={2} className={delivered ? "font-bold" : ""}>
+                    {delivered ? "Delivered" : order.address.landmark}
+                  </Text>
+                </View>
+                {delivered ? (
+                  <CheckCircle size={22} color={colors.brand} weight="fill" />
+                ) : isNext ? (
+                  <View className="rounded-full bg-brand-tint px-2.5 py-1">
+                    <Text variant="caption" tone="brand" className="font-extrabold">
+                      {atDoor ? "At door" : "Next"}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              {isNext ? (
+                <>
+                  <View className="flex-row gap-2">
+                    <StopAction
+                      icon={MapPin}
+                      label="Map"
+                      onPress={() => void Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${order.address.lat},${order.address.lng}`)}
+                    />
+                    {order.customer.phone ? <StopAction icon={Phone} label="Call" onPress={() => void Linking.openURL(`tel:${order.customer.phone}`)} /> : null}
+                    <StopAction icon={ChatCircleDots} label="Chat" onPress={() => openChat(order._id)} />
+                  </View>
+                  {atDoor ? (
+                    <Button
+                      label="Open the handover"
+                      size="lg"
+                      onPress={() => router.push({ pathname: "/run/[id]/door/[orderId]", params: { id: batch._id, orderId: order._id } })}
+                    />
+                  ) : (
+                    <Button label="I've arrived" size="lg" loading={busy === order._id} onPress={() => void arrive(order._id)} />
+                  )}
+                </>
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+}
+
+function StopAction({ icon: Icon, label, onPress }: { icon: typeof Phone; label: string; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" className="flex-1 flex-row items-center justify-center gap-1.5 rounded-input bg-surface-sunken" style={{ height: 44 }}>
+      <Icon size={18} color={colors.ink} weight="bold" />
+      <Text variant="smallStrong">{label}</Text>
     </Pressable>
   );
 }

@@ -166,7 +166,8 @@ describe("bank lookups", () => {
     await expect(s.ada.as.action(api.traders.resolveAccount, { accountNumber: "12345", bankCode: GTB })).rejects.toThrow(/10 digits/);
     await expect(s.ada.as.action(api.traders.resolveAccount, { accountNumber: "0000000000", bankCode: GTB })).rejects.toThrow(/couldn't find/);
     await expect(s.ada.as.action(api.traders.resolveAccount, { accountNumber: KEMI, bankCode: "nope" })).rejects.toThrow(/Pick the bank/);
-    await expect(s.c1.as.action(api.traders.resolveAccount, { accountNumber: KEMI, bankCode: GTB })).rejects.toThrow(/access/);
+    // Customers can look up accounts too (for their own payout account, M6).
+    expect((await s.c1.as.action(api.traders.resolveAccount, { accountNumber: KEMI, bankCode: GTB })).accountName).toBe("KEMI ALAO");
   });
 });
 

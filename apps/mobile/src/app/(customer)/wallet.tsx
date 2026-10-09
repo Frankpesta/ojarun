@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { View } from "react-native";
 import { router } from "expo-router";
-import { useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import { ArrowDown, ArrowUp, Bank, ClockCounterClockwise, Plus } from "phosphor-react-native";
 import { api } from "@ojarun/convex/api";
 import { formatNaira, lagosDate, formatLagosDay } from "@ojarun/shared";
-import { Button, DelayedSkeleton, Pressable, Screen, Skeleton, Text, useToast } from "@/components";
+import { Button, DelayedSkeleton, Pressable, Screen, Skeleton, Text, useSheet } from "@/components";
+import { WithdrawSheet } from "@/features/wallet/WithdrawSheet";
 import { useMe } from "@/features/auth/useSession";
 import { useTheme } from "@/theme/ThemeProvider";
 
@@ -22,8 +24,15 @@ const ENTRY_TITLE: Record<string, string> = {
 export default function CustomerWallet() {
   const me = useMe();
   const { colors } = useTheme();
-  const toast = useToast();
   const balance = me?.walletBalance ?? 0;
+  const payout = useQuery(api.withdrawals.payout);
+  const withdrawSheet = useSheet();
+  const [startWith, setStartWith] = useState<"amount" | "account">("amount");
+  const inFlight = payout?.recent.filter((w) => w.status === "requested" || w.status === "pending") ?? [];
+  const open = (step: "amount" | "account") => {
+    setStartWith(step);
+    withdrawSheet.present();
+  };
 
   return (
     <Screen title="Wallet" tabs>
@@ -57,7 +66,7 @@ export default function CustomerWallet() {
                 variant="onForest"
                 icon={ArrowUp}
                 disabled={balance <= 0}
-                onPress={() => toast.show({ message: "Withdrawals open with your first completed order." })}
+                onPress={() => open("amount")}
               />
             </View>
             <View className="flex-1">
@@ -68,33 +77,47 @@ export default function CustomerWallet() {
 
         <Pressable
           scale={false}
-          onPress={() => toast.show({ message: "You'll add your bank when you first withdraw." })}
+          onPress={() => open("account")}
           accessibilityRole="button"
-          accessibilityLabel="Bank account for withdrawals. Not added yet"
+          accessibilityLabel={payout?.account ? `Bank account for withdrawals: ${payout.account.name}, ${payout.account.bankName}. Change` : "Add a bank account for withdrawals"}
           className="flex-row items-center gap-3 rounded-card border border-line bg-surface px-4 py-3.5"
         >
-          <View className="h-11 w-11 items-center justify-center rounded-xl bg-warning-tint">
-            <Bank size={22} color={colors.warningInk} weight="bold" />
+          <View className={`h-11 w-11 items-center justify-center rounded-xl ${payout?.account ? "bg-brand-tint" : "bg-warning-tint"}`}>
+            <Bank size={22} color={payout?.account ? colors.brand : colors.warningInk} weight="bold" />
           </View>
           <View className="flex-1">
-            <Text variant="bodyStrong" style={{ fontSize: 15 }}>
-              Bank account
+            <Text variant="bodyStrong" style={{ fontSize: 15 }} numberOfLines={1}>
+              {payout?.account ? payout.account.name : "Bank account"}
             </Text>
             <Text variant="small" tone="faint">
-              Withdrawals go here. Not added yet
+              {payout?.account ? `${payout.account.bankName} ${payout.account.account}` : "Withdrawals go here. Not added yet"}
             </Text>
           </View>
+          <Text variant="smallStrong" tone="brand">
+            {payout?.account ? "Change" : "Add"}
+          </Text>
         </Pressable>
+
+        {inFlight.map((w) => (
+          <View key={w._id} className="flex-row items-center gap-3 rounded-card bg-warning-tint px-4 py-3" accessibilityLiveRegion="polite">
+            <ClockCounterClockwise size={20} color={colors.warningInk} weight="bold" />
+            <Text variant="small" tone="warningInk" className="flex-1 font-semibold">
+              {formatNaira(w.amount)} is on its way to {w.account}
+            </Text>
+          </View>
+        ))}
 
         <Activity />
       </View>
+      <WithdrawSheet sheet={withdrawSheet} startWith={startWith} />
     </Screen>
   );
 }
 
 function Activity() {
   const { colors } = useTheme();
-  const rows = useQuery(api.wallet.activity);
+  const { results, status, loadMore } = usePaginatedQuery(api.wallet.ledger, {}, { initialNumItems: 20 });
+  const rows = status === "LoadingFirstPage" ? undefined : results;
   const now = Date.now();
 
   return (
@@ -151,6 +174,9 @@ function Activity() {
           })}
         </View>
       )}
+      {status === "CanLoadMore" || status === "LoadingMore" ? (
+        <Button label="Show older activity" variant="ghost" loading={status === "LoadingMore"} onPress={() => loadMore(20)} />
+      ) : null}
     </View>
   );
 }

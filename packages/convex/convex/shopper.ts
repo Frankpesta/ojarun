@@ -121,6 +121,8 @@ export const batch = shopperQuery({
         _id: o._id,
         code: orderCode(o._id),
         status: o.status,
+        arrivedDistanceMeters: o.arrivedDistanceMeters ?? null,
+        unavailableAt: o.unavailableAt ?? null,
         customer: {
           firstName: customer?.name?.split(/\s+/)[0] ?? "Customer",
           phone: customer?.phone ?? null,
@@ -141,6 +143,7 @@ export const batch = shopperQuery({
               photoUrl: i.photoStorageId ? await ctx.storage.getUrl(i.photoStorageId) : null,
               shopperNote: i.shopperNote ?? null,
               quantityNote: i.quantityNote ?? null,
+              rejectionReason: i.rejectionReason ?? null,
             })),
         ),
       });
