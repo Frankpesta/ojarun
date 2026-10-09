@@ -60,7 +60,8 @@ type AutocompleteResponse = {
 export const autocomplete = action({
   args: { input: v.string(), sessionToken: v.string() },
   handler: async (ctx, { input, sessionToken }) => {
-    await requireCallerInAction(ctx, ["customer"]);
+    const caller = await requireCallerInAction(ctx, ["customer"]);
+    await ctx.runMutation(internal.rateLimits.check, { userId: caller._id, name: "placesSearch" });
     const text = input.trim().slice(0, 120);
     if (text.length < 2) return [];
     if (!TOKEN_RE.test(sessionToken)) throw appError(ErrorCode.INVALID_INPUT, "Invalid search session.");

@@ -4,6 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { shopperMutation, shopperQuery } from "./lib/auth";
 import { appError, ErrorCode } from "./lib/errors";
 import { postSystem } from "./lib/chat";
+import { notifyOrderEvent } from "./lib/notify";
 import { transitionOrder } from "./lib/stateMachine";
 import { orderCode } from "./orders";
 
@@ -189,6 +190,7 @@ export const startShopping = shopperMutation({
     for (const o of orders) {
       if (o.status === "assigned") {
         await transitionOrder(ctx, o, "shopping", { actorId: ctx.user._id, ...loc });
+        await notifyOrderEvent(ctx, o, "shopping_started");
         await postSystem(ctx, o._id, `${ctx.user.name?.split(/\s+/)[0] ?? "Your shopper"} started shopping at ${market?.name ?? "the market"}`, `started:${o._id}`);
       }
     }

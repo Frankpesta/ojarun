@@ -1,12 +1,14 @@
 import { v } from "convex/values";
-import { deliveryFee, isInsidePolygon, itemProblem, orderTotals } from "@ojarun/shared";
+import { deliveryFee, formatLagosTime, isInsidePolygon, itemProblem, orderTotals } from "@ojarun/shared";
 import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { customerMutation, customerQuery } from "./lib/auth";
 import { deliveryDistance } from "./lib/distance";
+import { raiseAlert } from "./lib/alerts";
 import { CANCELLABLE, cancelOrder, refundFor } from "./lib/cancel";
 import { appError, ErrorCode } from "./lib/errors";
 import { getSettings } from "./lib/settings";
+import { notifyOrderEvent } from "./lib/notify";
 import { transitionOrder } from "./lib/stateMachine";
 import { postWalletEntry } from "./lib/wallet";
 
@@ -133,6 +135,7 @@ export const create = customerMutation({
     }
     if (totals.chargeAmount === 0) {
       await transitionOrder(ctx, (await ctx.db.get(orderId))!, "paid");
+      await notifyOrderEvent(ctx, (await ctx.db.get(orderId))!, "payment_confirmed");
       return { orderId, status: "paid" as const, chargeAmount: 0 };
     }
     return { orderId, status: "pending_payment" as const, chargeAmount: totals.chargeAmount };
@@ -383,5 +386,34 @@ export const receipt = customerQuery({
       /** What the shopping really cost after change and refunds came back. */
       net: paid + extras - back,
     };
+  },
+});
+
+/**
+ * Every 10 min (05 §11): a paid order still without a shopper 30 minutes before its delivery
+ * window starts pages ops, once per order.
+ */
+export const flagUnassigned = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const paid = await ctx.db
+      .query("orders")
+      .withIndex("by_status", (q) => q.eq("status", "paid"))
+      .collect();
+    let flagged = 0;
+    for (const o of paid) {
+      const slot = await ctx.db.get(o.slotId);
+      if (!slot || slot.windowStart - now > 30 * 60_000 || slot.windowEnd < now) continue;
+      await raiseAlert(ctx, {
+        key: `unassigned:${o._id}`,
+        kind: "order_unassigned",
+        severity: "critical",
+        orderId: o._id,
+        message: `Order ${orderCode(o._id)} is paid but has no shopper, and its delivery window starts at ${formatLagosTime(slot.windowStart)}. Assign it on Dispatch or cancel it with a full refund.`,
+      });
+      flagged++;
+    }
+    return flagged;
   },
 });

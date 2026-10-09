@@ -5,6 +5,7 @@ import { audit } from "../lib/audit";
 import { appError, ErrorCode } from "../lib/errors";
 import { getSettings } from "../lib/settings";
 import { transitionOrder } from "../lib/stateMachine";
+import { notifyOrderEvent, notifyUser } from "../lib/notify";
 import { bearingOf, onShiftShoppers, proposeBatches } from "../batching";
 import { orderCode } from "../orders";
 import { cashSummary } from "./cash";
@@ -311,6 +312,7 @@ async function confirm(ctx: MutationCtx & { user: Doc<"users"> }, batch: Doc<"ba
     }
     await ctx.db.patch(o._id, { shopperId: batch.shopperId });
     await transitionOrder(ctx, { ...o, shopperId: batch.shopperId }, "assigned", { actorId: ctx.user._id });
+    await notifyOrderEvent(ctx, { ...o, shopperId: batch.shopperId }, "shopper_assigned");
     kept++;
   }
   if (kept === 0) {
@@ -318,6 +320,14 @@ async function confirm(ctx: MutationCtx & { user: Doc<"users"> }, batch: Doc<"ba
     return 0;
   }
   await ctx.db.patch(batch._id, { status: "assigned" });
+  const market = await ctx.db.get(batch.marketId);
+  await notifyUser(ctx, batch.shopperId, {
+    event: "run_assigned",
+    title: "New market run",
+    body: `${kept} ${kept === 1 ? "order" : "orders"} at ${market?.name ?? "the market"}. Open the app to see the list.`,
+    url: `/run/${batch._id}`,
+    dedupeKey: `run_assigned:${batch._id}:${batch.shopperId}`,
+  });
   return kept;
 }
 

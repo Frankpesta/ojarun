@@ -1,5 +1,6 @@
 import type { MutationCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
+import { notifyOps } from "./notify";
 
 type AlertInput = Pick<Doc<"opsAlerts">, "key" | "kind" | "severity" | "message"> & {
   transferId?: Id<"traderTransfers">;
@@ -26,7 +27,11 @@ export async function raiseAlert(ctx: MutationCtx, alert: AlertInput): Promise<I
     await ctx.db.patch(open._id, { message: alert.message, severity: alert.severity });
     return open._id;
   }
-  return await ctx.db.insert("opsAlerts", alert);
+  const id = await ctx.db.insert("opsAlerts", alert);
+  if (alert.severity === "critical") {
+    await notifyOps(ctx, { event: `ops_${alert.kind}`, title: alert.kind.replace(/_/g, " "), body: alert.message, dedupeKey: `ops:${id}` });
+  }
+  return id;
 }
 
 /** Closes the open alert for a key, e.g. when the balance recovers or a retry succeeds. */

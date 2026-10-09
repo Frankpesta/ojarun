@@ -90,6 +90,14 @@ const SECTIONS: { title: string; description: string; fields: FieldDef[] }[] = [
       { path: "supportPhone", label: "Phone number", kind: "text" },
     ],
   },
+  {
+    title: "Ops alerts",
+    description: "Critical alerts (blocked or failed transfers, low Paystack balance, a customer not answering) also go here by SMS and email.",
+    fields: [
+      { path: "opsAlertPhone", label: "On-call phone", kind: "text", hint: "e.g. 08031234567" },
+      { path: "opsAlertEmail", label: "On-call email", kind: "text" },
+    ],
+  },
 ];
 
 type Draft = Record<string, string | boolean>;

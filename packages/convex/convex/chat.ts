@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { authedMutation, authedQuery } from "./lib/auth";
 import { CHAT_OPEN, chatAccess, requireChatAccess } from "./lib/chat";
 import { appError, ErrorCode } from "./lib/errors";
+import { notifyUser } from "./lib/notify";
+import { hit, LIMITS } from "./lib/rateLimit";
 import { orderCode } from "./orders";
 
 /**
@@ -144,6 +146,7 @@ export const send = authedMutation({
     }
     const { order } = await requireChatAccess(ctx, ctx.user, args.orderId);
     if (!CHAT_OPEN.has(order.status)) throw appError(ErrorCode.INVALID_TRANSITION, "This chat has closed.");
+    await hit(ctx, `chat:${ctx.user._id}`, LIMITS.chat.windowMs, LIMITS.chat.max);
 
     const body = args.body?.trim();
     if (body && body.length > BODY_MAX) throw appError(ErrorCode.INVALID_INPUT, `Keep messages under ${BODY_MAX} characters.`);
@@ -154,7 +157,8 @@ export const send = authedMutation({
         throw appError(ErrorCode.INVALID_INPUT, "The photo didn't upload. Try again.");
       }
     }
-    return await ctx.db.insert("messages", {
+    const recipient = ctx.user._id === order.customerId ? order.shopperId : order.customerId;
+    const messageId = await ctx.db.insert("messages", {
       orderId: order._id,
       senderId: ctx.user._id,
       type: args.imageId ? "image" : "text",
@@ -162,5 +166,15 @@ export const send = authedMutation({
       imageId: args.imageId,
       clientRequestId: args.clientRequestId,
     });
+    if (recipient) {
+      await notifyUser(ctx, recipient, {
+        event: "chat_message",
+        title: ctx.user.name?.split(/\s+/)[0] ?? "New message",
+        body: body ? body.slice(0, 120) : "Sent a photo",
+        url: `/chat/${order._id}`,
+        dedupeKey: `chat:${messageId}`,
+      });
+    }
+    return messageId;
   },
 });

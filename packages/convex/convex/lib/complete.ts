@@ -1,7 +1,8 @@
-import { completionCredits } from "@ojarun/shared";
+import { completionCredits, formatNaira } from "@ojarun/shared";
 import type { MutationCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { postSystem } from "./chat";
+import { finalReceiptHtml, notifyUser } from "./notify";
 import { transitionOrder } from "./stateMachine";
 import { postWalletEntry } from "./wallet";
 
@@ -83,6 +84,27 @@ export async function completeOrder(
   }
 
   await closeBatchIfDone(ctx, order.batchId);
+  const market = await ctx.db.get(order.marketId);
+  const rejection = items.filter((i) => i.status === "rejected").reduce((s, i) => s + i.amountSpent, 0);
+  const back = credits.leftover + rejection;
+  await notifyUser(ctx, order.customerId, {
+    event: "order_completed",
+    title: back > 0 ? `Delivered. ${formatNaira(back)} is back in your wallet` : "Delivered. Enjoy!",
+    body: "Your receipt is in the app.",
+    url: `/receipt/${order._id}`,
+    orderId: order._id,
+    email: {
+      subject: "Your OjaRun receipt",
+      html: finalReceiptHtml({
+        market: market?.name ?? "the market",
+        items: items.map((i) => ({ name: i.name, status: i.status, amountSpent: i.amountSpent })),
+        paid: order.totals.chargeAmount + order.totals.walletApplied,
+        leftover: credits.leftover,
+        rejection,
+      }),
+    },
+    dedupeKey: `completed:${order._id}`,
+  });
   await postSystem(ctx, order._id, opts.reason ? "OjaRun completed this order for you" : "Delivered and accepted. Thank you!", `completed:${order._id}`);
   return { leftover: credits.leftover, rejection: items.filter((i) => i.status === "rejected").reduce((s, i) => s + i.amountSpent, 0) };
 }

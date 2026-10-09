@@ -5,6 +5,7 @@ import { canTransitionItem, formatNaira, haversineMeters } from "@ojarun/shared"
 import { customerMutation, customerQuery, shopperMutation } from "./lib/auth";
 import { raiseAlert } from "./lib/alerts";
 import { postSystem } from "./lib/chat";
+import { notifyOrderEvent } from "./lib/notify";
 import { completeOrder } from "./lib/complete";
 import { appError, ErrorCode } from "./lib/errors";
 import { transitionOrder } from "./lib/stateMachine";
@@ -57,6 +58,7 @@ export const enRoute = shopperMutation({
     const first = ctx.user.name?.split(/\s+/)[0] ?? "Your shopper";
     for (const o of shopping) {
       await transitionOrder(ctx, o, "en_route", { actorId: ctx.user._id, ...loc(lat, lng) });
+      await notifyOrderEvent(ctx, o, "en_route");
       await postSystem(ctx, o._id, `${first} is on the way with your shopping`, `en_route:${o._id}`);
     }
   },
@@ -73,6 +75,7 @@ export const arrived = shopperMutation({
     const here = loc(lat, lng);
     const distanceMeters = here ? Math.round(haversineMeters(here, order.addressSnapshot)) : null;
     await transitionOrder(ctx, order, "arrived", { actorId: ctx.user._id, ...here });
+    await notifyOrderEvent(ctx, order, "arrived");
     if (distanceMeters !== null) await ctx.db.patch(orderId, { arrivedDistanceMeters: distanceMeters });
     await postSystem(ctx, orderId, `${ctx.user.name?.split(/\s+/)[0] ?? "Your shopper"} is at your door. Check your items, then accept.`, `arrived:${orderId}`);
     return { distanceMeters };

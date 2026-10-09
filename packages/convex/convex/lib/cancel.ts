@@ -2,6 +2,7 @@ import { cancellationRefund, formatNaira } from "@ojarun/shared";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { postSystem } from "./chat";
+import { notifyUser } from "./notify";
 import { appError, ErrorCode } from "./errors";
 import { getSettings } from "./settings";
 import { transitionOrder } from "./stateMachine";
@@ -85,5 +86,15 @@ export async function cancelOrder(
     opts.byOps ? `OjaRun cancelled this order: ${opts.reason}. ${formatNaira(refund + chargeRefund)} is in your wallet.` : "You cancelled this order",
     `cancel:${order._id}`,
   );
+  if (opts.byOps) {
+    await notifyUser(ctx, order.customerId, {
+      event: "order_cancelled",
+      title: "Your order was cancelled",
+      body: `${opts.reason}. ${formatNaira(refund + chargeRefund)} is back in your wallet.`,
+      url: `/order/${order._id}`,
+      orderId: order._id,
+      dedupeKey: `cancelled:${order._id}`,
+    });
+  }
   return { refund: refund + chargeRefund };
 }

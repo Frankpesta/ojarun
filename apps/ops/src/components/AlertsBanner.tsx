@@ -41,7 +41,7 @@ export function AlertsBanner() {
               <span className="tabular ml-2 text-caption text-ink-muted">{formatLagosTime(a.at)}</span>
             </p>
             {a.kind !== "low_balance" ? (
-              <Link href={a.kind === "customer_unavailable" ? "/orders?status=arrived" : "/transfers"} className="shrink-0 text-small font-semibold text-brand hover:underline">
+              <Link href={a.kind === "order_unassigned" ? "/dispatch" : a.kind === "customer_unavailable" ? "/orders" : "/transfers"} className="shrink-0 text-small font-semibold text-brand hover:underline">
                 Review
               </Link>
             ) : null}

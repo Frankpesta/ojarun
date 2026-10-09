@@ -5,6 +5,7 @@ import { requireCallerInAction } from "./lib/actionAuth";
 import { appError, ErrorCode } from "./lib/errors";
 import { transitionOrder } from "./lib/stateMachine";
 import { paystack } from "./lib/paystack";
+import { notifyOrderEvent } from "./lib/notify";
 import { postWalletEntry } from "./lib/wallet";
 
 /**
@@ -155,6 +156,7 @@ export const markPaid = internalMutation({
     await ctx.db.patch(payment._id, { status: "success", paidAt: args.paidAt, channel: args.channel });
     if (order.status === "pending_payment") {
       await transitionOrder(ctx, order, "paid");
+      await notifyOrderEvent(ctx, order, "payment_confirmed");
       // Paid inside the hold but after cutoff: batching already ran, so add this order now.
       const slot = await ctx.db.get(order.slotId);
       if (slot?.status === "closed") await ctx.scheduler.runAfter(0, internal.batching.runForSlot, { slotId: slot._id });

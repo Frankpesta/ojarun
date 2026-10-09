@@ -35,6 +35,7 @@ http.route({
     const given = (request.headers.get("x-paystack-signature") ?? "").toLowerCase();
     if (!constantTimeEqual(given, await paystackSignature(body, secret))) {
       console.error({ evt: "webhook.bad_signature" });
+      await ctx.runMutation(internal.rateLimits.badSignature, {});
       return new Response("invalid signature", { status: 401 });
     }
 

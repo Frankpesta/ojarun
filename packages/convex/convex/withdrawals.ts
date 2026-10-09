@@ -4,6 +4,8 @@ import { action, internalAction, internalMutation, internalQuery } from "./_gene
 import { internal } from "./_generated/api";
 import { requireCallerInAction } from "./lib/actionAuth";
 import { raiseAlert } from "./lib/alerts";
+import { esc, notifyUser, shell } from "./lib/notify";
+import { hit, LIMITS } from "./lib/rateLimit";
 import { audit } from "./lib/audit";
 import { appError, ErrorCode } from "./lib/errors";
 import { paystack, paystackSimulated } from "./lib/paystack";
@@ -96,6 +98,7 @@ export const request = customerMutation({
       if (seen.userId !== ctx.user._id) throw appError(ErrorCode.INVALID_INPUT, "Bad request id.");
       return seen._id;
     }
+    await hit(ctx, `withdrawal:${ctx.user._id}`, LIMITS.withdrawal.windowMs, LIMITS.withdrawal.max);
     const { minWithdrawalKobo } = await getSettings(ctx);
     if (!Number.isSafeInteger(amount) || amount <= 0) throw appError(ErrorCode.INVALID_INPUT, "Enter an amount.");
     if (amount < minWithdrawalKobo) throw appError(ErrorCode.INVALID_INPUT, `The minimum withdrawal is ${formatNaira(minWithdrawalKobo)}.`);
@@ -248,6 +251,14 @@ export const applyResult = internalMutation({
         });
       }
       await ctx.db.patch(w._id, { status: "success", settledAt: now, failureReason: undefined });
+      await notifyUser(ctx, w.userId, {
+        event: "withdrawal_sent",
+        title: `${formatNaira(w.amount)} sent to your bank`,
+        body: `It's on its way to ${w.resolvedName}.`,
+        url: "/wallet",
+        email: { subject: "Your OjaRun withdrawal", html: shell(`<p style="margin:0">${esc(`${formatNaira(w.amount)} has been sent to ${w.resolvedName} (account ending ${w.accountNumber.slice(-4)}).`)}</p>`) },
+        dedupeKey: `withdrawal_sent:${w._id}`,
+      });
       return "success";
     }
     await ctx.db.patch(w._id, { status, settledAt: now, failureReason: reason ?? (status === "reversed" ? "The bank sent it back." : "The transfer didn't go through.") });
@@ -258,6 +269,14 @@ export const applyResult = internalMutation({
       withdrawalId: w._id,
       dedupeKey: `withdraw_back:${w._id}`,
       note: reason ?? "Withdrawal didn't go through",
+    });
+    await notifyUser(ctx, w.userId, {
+      event: "withdrawal_failed",
+      title: "Your withdrawal didn't go through",
+      body: `${formatNaira(w.amount)} is back in your wallet. Check your bank details and try again.`,
+      url: "/wallet",
+      email: { subject: "Your OjaRun withdrawal didn't go through", html: shell(`<p style="margin:0">${esc(`The bank didn't accept your ${formatNaira(w.amount)} withdrawal, so the money is back in your OjaRun wallet.`)}</p>`) },
+      dedupeKey: `withdrawal_failed:${w._id}`,
     });
     await raiseAlert(ctx, {
       key: `withdrawal_failed:${w._id}`,

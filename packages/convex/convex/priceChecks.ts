@@ -5,6 +5,8 @@ import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { customerMutation, customerQuery, shopperMutation, shopperQuery } from "./lib/auth";
 import { postSystem } from "./lib/chat";
+import { notifyUser } from "./lib/notify";
+import { hit, LIMITS } from "./lib/rateLimit";
 import { appError, ErrorCode } from "./lib/errors";
 import { getSettings } from "./lib/settings";
 import { itemCap } from "./lib/spend";
@@ -40,6 +42,7 @@ export const send = shopperMutation({
     if (seen) return seen._id;
 
     const item = await itemForShopping(ctx, ctx.user, args.itemId);
+    await hit(ctx, `priceCheck:${ctx.user._id}`, LIMITS.priceCheck.windowMs, LIMITS.priceCheck.max);
     const cap = itemCap(item);
     for (const [n, label] of [[args.quoted, "today's price"], [args.extraRequested, "the extra"]] as const) {
       if (!Number.isSafeInteger(n) || n <= 0) throw appError(ErrorCode.INVALID_INPUT, `Enter ${label}.`);
@@ -79,6 +82,16 @@ export const send = shopperMutation({
       },
     });
     await ctx.scheduler.runAt(expiresAt, internal.priceChecks.timeout, { messageId });
+    const order = (await ctx.db.get(item.orderId))!;
+    await notifyUser(ctx, order.customerId, {
+      event: "price_check",
+      title: `${item.name} costs more today`,
+      body: `${firstName(ctx.user, "Your shopper")} asks for ${formatNaira(args.extraRequested)} more. Answer in ${Math.round(priceCheckTimeoutSec / 60)} minutes or they'll buy within your budget.`,
+      url: `/chat/${order._id}`,
+      orderId: order._id,
+      sms: true,
+      dedupeKey: `price_check:${messageId}`,
+    });
     return messageId;
   },
 });
@@ -94,6 +107,15 @@ async function settle(ctx: MutationCtx, message: Doc<"messages">, state: "buy_wi
       ? `No answer in time, so ${firstName(shopper, "your shopper")} will buy ${formatNaira(pc.budget)} worth of ${name}: ${pc.budgetGets}.`
       : `${name} costs more today, so ${firstName(shopper, "your shopper")} will buy ${formatNaira(pc.budget)} worth: ${pc.budgetGets}.`;
   await postSystem(ctx, message.orderId, body, `pc:${message._id}`);
+  if (order?.shopperId) {
+    await notifyUser(ctx, order.shopperId, {
+      event: "price_check_answered",
+      title: state === "timed_out" ? `No answer on ${name}` : `Keep ${name} within budget`,
+      body: `Buy ${formatNaira(pc.budget)} worth: ${pc.budgetGets}.`,
+      url: `/chat/${message.orderId}`,
+      dedupeKey: `pc_answer:${message._id}`,
+    });
+  }
 }
 
 /** The customer's answer. Approving pays from leftover buffer first, then the wallet, atomically. */
@@ -147,6 +169,15 @@ export const respond = customerMutation({
       `${firstName(ctx.user, "The customer")} approved ${formatNaira(extra)} extra for ${item.name}. The budget is now ${formatNaira(itemCap(item) + extra)}.`,
       `pc:${messageId}`,
     );
+    if (order.shopperId) {
+      await notifyUser(ctx, order.shopperId, {
+        event: "price_check_answered",
+        title: `${item.name}: ${formatNaira(extra)} extra approved`,
+        body: `You can now pay up to ${formatNaira(itemCap(item) + extra)} for it.`,
+        url: `/chat/${order._id}`,
+        dedupeKey: `pc_answer:${messageId}`,
+      });
+    }
     return "approved";
   },
 });

@@ -48,6 +48,9 @@ export const settingsSchema = z.object({
   genericBudgetChipsKobo: z.array(kobo).min(1).max(4),
   supportWhatsapp: z.string(),
   supportPhone: z.string(),
+  /** Critical ops alerts go here by SMS and email too (05 §11). Empty = dashboard only. */
+  opsAlertPhone: z.string(),
+  opsAlertEmail: z.string(),
   /** Akure delivery area as a [lng, lat] ring (GeoJSON order). */
   geofence: z.array(z.tuple([z.number(), z.number()])).min(3),
 });
@@ -93,6 +96,8 @@ export const DEFAULT_SETTINGS: Settings = {
   genericBudgetChipsKobo: [1_000_00, 2_000_00, 5_000_00],
   supportWhatsapp: "",
   supportPhone: "",
+  opsAlertPhone: "",
+  opsAlertEmail: "",
   geofence: [
     [5.12, 7.19],
     [5.27, 7.19],

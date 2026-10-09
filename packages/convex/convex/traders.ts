@@ -163,7 +163,8 @@ export const resolveAccount = action({
   args: { accountNumber: v.string(), bankCode: v.string() },
   handler: async (ctx, args): Promise<{ accountNumber: string; accountName: string; bankName: string }> => {
     // Customers look up their own payout account; shoppers, traders; ops, shoppers' accounts.
-    await requireCallerInAction(ctx, ["customer", "shopper", "ops"]);
+    const caller = await requireCallerInAction(ctx, ["customer", "shopper", "ops"]);
+    await ctx.runMutation(internal.rateLimits.check, { userId: caller._id, name: "resolveAccount" });
     return await ctx.runAction(internal.traders.resolve, args);
   },
 });

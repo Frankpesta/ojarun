@@ -456,6 +456,7 @@ export default defineSchema({
       v.literal("paystack_config"),
       v.literal("customer_unavailable"),
       v.literal("withdrawal_failed"),
+      v.literal("order_unassigned"),
     ),
     severity: v.union(v.literal("critical"), v.literal("warning")),
     message: v.string(),
@@ -498,6 +499,39 @@ export default defineSchema({
     lng: v.optional(v.number()),
     at: v.number(),
   }).index("by_order", ["orderId"]),
+
+  /**
+   * Notification outbox (doc 02 §13): one row per event per person, with what happened on each
+   * channel. "skipped" means the channel isn't configured (no key) or the person has no token,
+   * phone or email for it.
+   */
+  notifications: defineTable({
+    userId: v.optional(v.id("users")),
+    /** For ops alerts, which go to the on-call phone/email in settings instead of a user. */
+    audience: v.union(v.literal("user"), v.literal("ops")),
+    event: v.string(),
+    title: v.string(),
+    body: v.string(),
+    /** In-app route the push opens, e.g. "/order/abc". */
+    url: v.optional(v.string()),
+    orderId: v.optional(v.id("orders")),
+    channels: v.object({
+      push: v.optional(v.string()),
+      sms: v.optional(v.string()),
+      email: v.optional(v.string()),
+    }),
+    email: v.optional(v.object({ subject: v.string(), html: v.string() })),
+    dedupeKey: v.string(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_dedupeKey", ["dedupeKey"]),
+
+  /** Fixed-window counters for lib/rateLimit.ts. */
+  rateLimits: defineTable({
+    key: v.string(),
+    windowStart: v.number(),
+    count: v.number(),
+  }).index("by_key", ["key"]),
 
   pushTokens: defineTable({
     userId: v.id("users"),

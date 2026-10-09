@@ -16,6 +16,8 @@ export const ErrorCode = {
   SLOT_CLOSED: "SLOT_CLOSED",
   /** A dependency (Google, Paystack) is unreachable or not configured. Safe to retry later. */
   UNAVAILABLE: "UNAVAILABLE",
+  /** Too many requests in a short time (lib/rateLimit.ts). */
+  RATE_LIMITED: "RATE_LIMITED",
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
