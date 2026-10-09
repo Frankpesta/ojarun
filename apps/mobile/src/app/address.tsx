@@ -3,8 +3,9 @@ import { View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import MapView, { PROVIDER_GOOGLE, type Region } from "react-native-maps";
-import { useMutation, useQuery } from "convex/react";
+import { Camera, Map as MapLibreMap, type CameraRef, type ViewStateChangeEvent } from "@maplibre/maplibre-react-native";
+import type { NativeSyntheticEvent } from "react-native";
+import { useAction, useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { MagnifyingGlass, MapPin, WarningCircle } from "phosphor-react-native";
 import { api } from "@ojarun/convex/api";
@@ -17,8 +18,11 @@ import { friendlyError } from "@/lib/errors";
 import { haptic } from "@/lib/haptics";
 import { useTheme } from "@/theme/ThemeProvider";
 
-const AKURE: Region = { latitude: 7.2526, longitude: 5.1931, latitudeDelta: 0.06, longitudeDelta: 0.06 };
-const STREET_ZOOM = { latitudeDelta: 0.004, longitudeDelta: 0.004 };
+/** OpenFreeMap: free OpenStreetMap vector tiles, no key or limits. */
+const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+const AKURE_CENTRE: [number, number] = [5.1931, 7.2526];
+const CITY_ZOOM = 12.5;
+const STREET_ZOOM = 17;
 const LABELS = ["Home", "Work", "Other"] as const;
 
 export default function AddressScreen() {
@@ -52,7 +56,9 @@ function Editor({ existing, geofence, onboarding }: { existing: Existing | null;
   const { colors } = useTheme();
   const toast = useToast();
   const searchSheet = useSheet();
-  const map = useRef<MapView>(null);
+  const camera = useRef<CameraRef>(null);
+  const reverse = useAction(api.places.reverse);
+  const reverseSeq = useRef(0);
   const create = useMutation(api.addresses.create);
   const update = useMutation(api.addresses.update);
 
@@ -64,6 +70,7 @@ function Editor({ existing, geofence, onboarding }: { existing: Existing | null;
   const [label, setLabel] = useState<string>(existing ? (presetLabel ?? "Other") : "Home");
   const [customLabel, setCustomLabel] = useState(existing && !presetLabel ? existing.label : "");
   const [saving, setSaving] = useState(false);
+  const [pinOnly, setPinOnly] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // New addresses start with the search open: it's the fastest way to the right street.
@@ -78,10 +85,34 @@ function Editor({ existing, geofence, onboarding }: { existing: Existing | null;
   const finalLabel = label === "Other" ? customLabel.trim() || "Other" : label;
   const canSave = !!formatted && !!pin && landmark.trim().length >= 3 && !outside;
 
-  const onRegionChangeComplete = (r: Region) => {
-    if (!formatted) return; // The pin only means something once a place is chosen.
-    setPin({ lat: r.latitude, lng: r.longitude });
+  // Name the spot under the pin from OpenStreetMap, when the customer placed it by hand.
+  const nameThePin = (lat: number, lng: number) => {
+    const seq = ++reverseSeq.current;
+    void reverse({ lat, lng })
+      .then((r) => {
+        if (seq === reverseSeq.current && r?.formatted) setFormatted(r.formatted);
+      })
+      .catch(() => {});
+  };
+
+  const onRegionDidChange = (e: NativeSyntheticEvent<ViewStateChangeEvent>) => {
+    if (!formatted || !e.nativeEvent.userInteraction) return; // The pin only means something once a place is chosen.
+    const [lng, lat] = e.nativeEvent.center;
+    setPin({ lat, lng });
     setError(null);
+    if (pinOnly) nameThePin(lat, lng);
+  };
+
+  /** OpenStreetMap doesn't know every street in Akure: let people just place the pin. */
+  const placePinYourself = () => {
+    searchSheet.dismiss();
+    setPinOnly(true);
+    setPlaceId(undefined);
+    const centre = pin ?? { lat: AKURE_CENTRE[1], lng: AKURE_CENTRE[0] };
+    setPin(centre);
+    setFormatted("Pinned location");
+    camera.current?.easeTo({ center: [centre.lng, centre.lat], zoom: 15, duration: 450 });
+    nameThePin(centre.lat, centre.lng);
   };
 
   const save = async () => {
@@ -108,17 +139,22 @@ function Editor({ existing, geofence, onboarding }: { existing: Existing | null;
     <View className="flex-1 bg-bg">
       <KeyboardAvoidingView behavior="padding" className="flex-1">
         <View className="flex-1">
-          <MapView
-            ref={map}
-            provider={PROVIDER_GOOGLE}
+          <MapLibreMap
             style={{ flex: 1 }}
-            initialRegion={pin ? { latitude: pin.lat, longitude: pin.lng, ...STREET_ZOOM } : AKURE}
-            onRegionChangeComplete={onRegionChangeComplete}
-            toolbarEnabled={false}
-            rotateEnabled={false}
-            pitchEnabled={false}
+            mapStyle={MAP_STYLE}
+            onRegionDidChange={onRegionDidChange}
+            touchRotate={false}
+            touchPitch={false}
+            compass={false}
+            logo={false}
+            attributionPosition={{ bottom: 36, left: 8 }}
             accessibilityLabel="Map. Move it to put the pin on your gate."
-          />
+          >
+            <Camera
+              ref={camera}
+              initialViewState={pin ? { center: [pin.lng, pin.lat], zoom: STREET_ZOOM } : { center: AKURE_CENTRE, zoom: CITY_ZOOM }}
+            />
+          </MapLibreMap>
           {/* Fixed centre pin: the map moves under it. The tip sits on the centre point. */}
           <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
             <View style={{ marginBottom: formatted ? 92 : 44 }} className="items-center">
@@ -175,6 +211,13 @@ function Editor({ existing, geofence, onboarding }: { existing: Existing | null;
               </Text>
             </View>
           </View>
+          {!formatted ? (
+            <Pressable onPress={placePinYourself} accessibilityRole="button" className="self-start py-1">
+              <Text variant="smallStrong" tone="brand">
+                Can't find your street? Place the pin yourself
+              </Text>
+            </Pressable>
+          ) : null}
           <Input
             label="Landmark or directions"
             placeholder="e.g. Opposite First Bank, blue gate"
@@ -219,9 +262,10 @@ function Editor({ existing, geofence, onboarding }: { existing: Existing | null;
         onPicked={(place) => {
           setFormatted(place.formatted);
           setPlaceId(place.placeId);
+          setPinOnly(false);
           setPin({ lat: place.lat, lng: place.lng });
           setError(null);
-          map.current?.animateToRegion({ latitude: place.lat, longitude: place.lng, ...STREET_ZOOM }, 450);
+          camera.current?.flyTo({ center: [place.lng, place.lat], zoom: STREET_ZOOM, duration: 450 });
         }}
       />
     </View>

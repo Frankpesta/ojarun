@@ -77,7 +77,10 @@ afterEach(() => {
 });
 
 describe("pricing", () => {
-  it("quotes every market cheapest first, estimating distances in development", async () => {
+  it("quotes every market cheapest first, estimating distances when the router is unreachable", async () => {
+    vi.stubGlobal("fetch", async () => {
+      throw new Error("offline");
+    });
     const t = setup();
     const w = await world(t);
     const { as, addressId } = await customer(t);
@@ -90,20 +93,23 @@ describe("pricing", () => {
     expect(isikan.deliveryFee).toBe(deliveryFee(estimatedRoadMeters(AKURE, w.market), DEFAULT_SETTINGS.deliveryFee));
   });
 
-  it("refuses to guess fees in production without the Routes key", async () => {
+  it("falls back to an estimate when the router is down, without caching it", async () => {
     vi.stubEnv("APP_ENV", "production");
+    vi.stubGlobal("fetch", async () => new Response("down", { status: 503 }));
     const t = setup();
     await world(t);
     const { as, addressId } = await customer(t);
-    await expect(as.action(api.pricing.quoteMarkets, { addressId })).rejects.toThrow(/aren't available/);
+    const quotes = await as.action(api.pricing.quoteMarkets, { addressId });
+    expect(quotes.length).toBeGreaterThan(0);
+    expect(quotes.every((q) => q.estimated)).toBe(true);
+    expect(await t.run((ctx) => ctx.db.query("distanceCache").collect())).toEqual([]);
   });
 
-  it("caches Routes API distances per address and market", async () => {
-    vi.stubEnv("GOOGLE_MAPS_SERVER_KEY", "test-key");
-    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
-      const body = JSON.parse(init.body as string) as { origins: unknown[] };
+  it("caches OSRM distances per address and market", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      const sources = new URL(url).searchParams.get("sources")!.split(";");
       return new Response(
-        JSON.stringify(body.origins.map((_, i) => ({ originIndex: i, destinationIndex: 0, distanceMeters: 2_000 + i * 1_000, duration: "300s", condition: "ROUTE_EXISTS" }))),
+        JSON.stringify({ code: "Ok", distances: sources.map((_, i) => [2_000 + i * 1_000]), durations: sources.map(() => [300]) }),
       );
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -112,6 +118,7 @@ describe("pricing", () => {
     const { as, addressId } = await customer(t);
     const first = await as.action(api.pricing.quoteMarkets, { addressId });
     expect(first.some((q) => q.estimated)).toBe(false);
+    expect(fetchMock.mock.calls[0]![0]).toMatch(/^https:\/\/router\.project-osrm\.org\/table\/v1\/driving\//);
     await as.action(api.pricing.quoteMarkets, { addressId });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });

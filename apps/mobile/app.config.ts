@@ -41,8 +41,8 @@ const config: ExpoConfig = {
     ["expo-location", { locationWhenInUsePermission: "OjaRun records where you are when you start shopping and when you arrive." }],
     // Push: order updates, price checks, chat. Small icon must be a white silhouette.
     ["expo-notifications", { icon: "./assets/android-icon-monochrome.png", color: "#15803D", defaultChannel: "default" }],
-    // Android Maps SDK key, restricted to the package name + SHA-1. Set as an EAS secret.
-    ["react-native-maps", { androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_ANDROID_KEY }],
+    // Maps: MapLibre with free OpenStreetMap tiles (OpenFreeMap). No Google key or billing.
+    "@maplibre/maplibre-react-native",
     [
       // Source maps upload on EAS when SENTRY_AUTH_TOKEN is set as an EAS secret.
       "@sentry/react-native/expo",

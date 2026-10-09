@@ -4,15 +4,14 @@ import { action, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { requireCallerInAction } from "./lib/actionAuth";
-import { canEstimateDistances, deliveryDistance } from "./lib/distance";
+import { deliveryDistance } from "./lib/distance";
 import { appError, ErrorCode } from "./lib/errors";
 import { getSettings } from "./lib/settings";
 
 /**
- * Delivery fee per market for one address (05 §5.5). Distances come from the Routes API, one
- * matrix call for every uncached market, and are cached per (address, market) for good.
+ * Delivery fee per market for one address (05 §5.5). Distances come from OSRM, one table call
+ * for every uncached market, and are cached per (address, market) for good.
  */
-const ROUTES = "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix";
 
 type Point = { lat: number; lng: number };
 
@@ -88,40 +87,35 @@ export const marketQuotes = internalQuery({
   },
 });
 
-type MatrixElement = {
-  originIndex?: number;
-  destinationIndex?: number;
-  distanceMeters?: number;
-  duration?: string;
-  condition?: string;
-};
+type Table = { code?: string; distances?: (number | null)[][]; durations?: (number | null)[][] };
 
-async function routeMatrix(origins: Point[], destination: Point, key: string): Promise<MatrixElement[]> {
-  const waypoint = (p: Point) => ({ waypoint: { location: { latLng: { latitude: p.lat, longitude: p.lng } } } });
-  let res: Response;
+/**
+ * Road distances from each market to the address with OSRM's table service (OpenStreetMap,
+ * free, no key). OSRM_URL can point at a self-hosted router; the default is the public one,
+ * which is fine for our volume because every (address, market) pair is fetched once and cached.
+ */
+async function osrmTable(markets: Point[], address: Point): Promise<{ distanceMeters: number; durationSec: number }[] | null> {
+  const base = process.env.OSRM_URL ?? "https://router.project-osrm.org";
+  const coords = [address, ...markets].map((p) => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`).join(";");
+  const sources = markets.map((_, i) => i + 1).join(";");
   try {
-    res = await fetch(ROUTES, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": key,
-        "X-Goog-FieldMask": "originIndex,destinationIndex,distanceMeters,duration,condition",
-      },
-      body: JSON.stringify({
-        origins: origins.map(waypoint),
-        destinations: [waypoint(destination)],
-        travelMode: "DRIVE",
-        routingPreference: "TRAFFIC_UNAWARE",
-      }),
+    const res = await fetch(`${base}/table/v1/driving/${coords}?sources=${sources}&destinations=0&annotations=distance,duration`, {
+      headers: { "User-Agent": "OjaRun/1.0 (Akure grocery delivery)" },
     });
-  } catch {
-    throw appError(ErrorCode.UNAVAILABLE, "We couldn't reach the map service. Check your connection and try again.");
+    if (!res.ok) {
+      console.error({ evt: "osrm.error", status: res.status });
+      return null;
+    }
+    const body = (await res.json()) as Table;
+    if (body.code !== "Ok" || !body.distances) return null;
+    return markets.map((_, i) => ({
+      distanceMeters: Math.round(body.distances![i]?.[0] ?? -1),
+      durationSec: Math.round(body.durations?.[i]?.[0] ?? 0),
+    }));
+  } catch (e) {
+    console.error({ evt: "osrm.unreachable", error: String(e) });
+    return null;
   }
-  if (!res.ok) {
-    console.error({ evt: "routes.error", status: res.status, body: (await res.text()).slice(0, 500) });
-    throw appError(ErrorCode.UNAVAILABLE, "Delivery fees aren't available right now. Try again shortly.");
-  }
-  return (await res.json()) as MatrixElement[];
 }
 
 export const quoteMarkets = action({
@@ -131,24 +125,12 @@ export const quoteMarkets = action({
     const state = await ctx.runQuery(internal.pricing.quoteState, { userId: caller._id, addressId });
 
     if (state.missing.length) {
-      const key = process.env.GOOGLE_MAPS_SERVER_KEY;
-      if (key) {
-        // In development a failing key (e.g. billing not enabled yet) falls back to estimates.
-        const elements = await routeMatrix(state.missing, state.address, key).catch((e: unknown) => {
-          if (canEstimateDistances()) return [] as MatrixElement[];
-          throw e;
-        });
-        const rows = elements
-          .filter((e) => e.condition === "ROUTE_EXISTS" && e.originIndex !== undefined && e.distanceMeters !== undefined)
-          .map((e) => ({
-            marketId: state.missing[e.originIndex!]!._id,
-            distanceMeters: e.distanceMeters!,
-            durationSec: Number.parseInt(e.duration ?? "0", 10) || 0,
-          }));
-        if (rows.length) await ctx.runMutation(internal.pricing.cacheDistances, { addressId, rows });
-      } else if (!canEstimateDistances()) {
-        throw appError(ErrorCode.UNAVAILABLE, "Delivery fees aren't available right now. Try again shortly.");
-      }
+      // If the router is down, marketQuotes falls back to an estimate and we try again next time.
+      const table = await osrmTable(state.missing, state.address);
+      const rows = (table ?? [])
+        .map((r, i) => ({ marketId: state.missing[i]!._id, ...r }))
+        .filter((r) => r.distanceMeters >= 0);
+      if (rows.length) await ctx.runMutation(internal.pricing.cacheDistances, { addressId, rows });
     }
     return await ctx.runQuery(internal.pricing.marketQuotes, { addressId });
   },

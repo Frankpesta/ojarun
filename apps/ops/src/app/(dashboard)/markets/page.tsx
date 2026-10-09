@@ -8,7 +8,7 @@ import { formatMinutes, parseMinutes } from "@ojarun/shared";
 import { Drawer } from "@/components/Drawer";
 import { Button, EmptyState, PageHeader, Pill } from "@/components/ui";
 import { errorMessage, Field, FormError, ReasonField, reasonOk, Skeleton, TextInput } from "@/components/form";
-import { AKURE_CENTRE, mapsAvailable, PinPicker } from "@/components/maps";
+import { AKURE_CENTRE, PinPicker } from "@/components/maps";
 
 type Market = FunctionReturnType<typeof api.ops.markets.list>[number];
 
@@ -138,11 +138,8 @@ function MarketDrawer({ market, nextSortOrder, onClose }: { market: Market | nul
 
         <div className="flex flex-col gap-2">
           <span className="text-small font-medium text-ink-muted">Entrance pin</span>
-          {mapsAvailable ? (
-            <PinPicker value={pin} onChange={setPin} />
-          ) : (
-            <p className="text-caption text-ink-faint">Add NEXT_PUBLIC_GOOGLE_MAPS_KEY to drag a pin on a map. For now, type the coordinates.</p>
-          )}
+          <PinPicker value={pin} onChange={setPin} />
+          <p className="text-caption text-ink-faint">Drag the pin, or click the map, to place the market.</p>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Latitude">
               <TextInput

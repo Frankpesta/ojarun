@@ -7,7 +7,7 @@ import { isInsidePolygon } from "@ojarun/shared";
 import { Drawer } from "@/components/Drawer";
 import { Button, PageHeader, Pill } from "@/components/ui";
 import { errorMessage, Field, FormError, ReasonField, reasonOk, Skeleton, TextArea, TextInput } from "@/components/form";
-import { GeofenceMap, mapsAvailable, type Ring } from "@/components/maps";
+import { GeofenceMap, type Ring } from "@/components/maps";
 
 /** Accepts a GeoJSON Polygon, Feature, FeatureCollection, or a bare [[lng, lat], …] ring. */
 function parseRing(text: string): Ring | string {
@@ -99,19 +99,8 @@ export default function DeliveryAreaPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="flex flex-col gap-3">
-          {mapsAvailable ? (
-            <>
-              <GeofenceMap ring={ring} onChange={updateRing} markers={(markets ?? []).filter((m) => m.active)} />
-              <p className="text-caption text-ink-faint">Drag a corner to move it. Drag the faint midpoint of an edge to add a corner.</p>
-            </>
-          ) : (
-            <div className="rounded-card border border-dashed border-line-strong px-6 py-10">
-              <p className="font-semibold">Map editing needs a Google Maps key</p>
-              <p className="mt-1 text-small text-ink-muted">
-                Add NEXT_PUBLIC_GOOGLE_MAPS_KEY to the ops app. Until then, paste GeoJSON, e.g. drawn at geojson.io.
-              </p>
-            </div>
-          )}
+          <GeofenceMap ring={ring} onChange={updateRing} markers={(markets ?? []).filter((m) => m.active)} />
+          <p className="text-caption text-ink-faint">Drag a corner to move it. Click the faint midpoint of an edge to add a corner. Double-click a corner to remove it.</p>
         </div>
 
         <aside className="flex flex-col gap-5">

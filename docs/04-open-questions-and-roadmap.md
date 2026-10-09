@@ -34,7 +34,7 @@
 | Shopper phone number exposure / customers taken off-platform | Accepted at launch; in-app voice calls in phase 2 |
 | Weak network in markets | Offline upload queue, idempotent mutations, retrying transfers |
 | Low-end Android devices | Light shopper flow, aggressive photo compression, test on cheap devices |
-| Google Maps costs | Session tokens, distance cache per (address, market) |
+| Free map services (OpenStreetMap) going down or rate-limiting | Distances cached per (address, market) with an estimate fallback; customers can place the pin without search; PHOTON_URL / OSRM_URL can point at self-hosted servers |
 | SMS costs (Clerk OTP) | Confirm Nigerian SMS pricing early; Termii as a fallback |
 | Slot overbooking | Capacity caps per slot, matched to shopper availability |
 | Long trips to distant markets | Distance-based fee; batching; slot cutoffs that leave travel time |

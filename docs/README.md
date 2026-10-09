@@ -40,7 +40,7 @@
 - One app with role-based screens (customer / shopper); roles assigned server-side only
 - Clerk email-code sign-in (phone collected in profile setup)
 - Paystack: checkout, webhooks, Transfers (traders + withdrawals), account resolution
-- Google Maps Platform: Places autocomplete, Routes API (cached), react-native-maps
+- OpenStreetMap, free with no keys: MapLibre + OpenFreeMap tiles, Photon address search, OSRM distances (cached)
 - Status-only tracking (no live map); no background location
 - In-app chat + native phone calls at launch; in-app voice calls later
 - Trader transfers auto-approved within budget, with fraud safeguards

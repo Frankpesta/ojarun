@@ -12,7 +12,7 @@
 | Monorepo | **Turborepo** |
 | Auth | **Clerk**, email code (Clerk cannot send SMS to Nigerian numbers; phone collected in-app) |
 | Payments | **Paystack** — checkout, webhooks, Transfers, account resolution |
-| Maps | **Google Maps Platform** — Places autocomplete, Routes API, react-native-maps |
+| Maps | **OpenStreetMap, free, no keys**: MapLibre + OpenFreeMap tiles (app and ops), Photon address search, OSRM road distances |
 | Push | Expo push notifications |
 | SMS | Clerk for OTP; **Termii** for transactional SMS fallback |
 | Email | **Resend**, for receipts |
@@ -79,8 +79,8 @@ packages/
 - **Places Autocomplete** with **session tokens**, so a search is billed as one session, not per keystroke.
 - A **draggable pin** stores exact coordinates, alongside a **landmark / directions** notes field.
 - **Geofence:** an Akure polygon is checked on the server whenever an address is saved or an order is placed.
-- **Delivery fee:** the Routes API calculates distance from market to address. Results are **cached per (address, market)** in Convex and reused, so each pair is calculated only once.
-- react-native-maps displays the map when picking an address. Orders have no tracking map.
+- **Delivery fee:** OSRM (`/table`) calculates road distance from each market to the address. Results are **cached per (address, market)** in Convex and reused, so each pair is calculated only once. If OSRM is unreachable, the fee uses a straight-line estimate × 1.35 that isn't cached, so the next quote retries.
+- MapLibre React Native (OpenFreeMap tiles) displays the map when picking an address; customers can search (Photon) or place the pin themselves, and Photon reverse-geocodes the pin. Orders have no tracking map.
 
 ## 7. Realtime, chat and tracking
 

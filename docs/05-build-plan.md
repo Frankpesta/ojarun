@@ -17,7 +17,7 @@ These rules hold in every milestone. PR review should reject any change that bre
 5. **Every client-retriable mutation takes a `clientRequestId`** (UUID made on the device) and is idempotent on it.
 6. **The wallet is an append-only ledger.** The cached balance is updated in the same mutation as the entry, never on its own.
 7. **State machines are enforced on the server.** Order and item transitions go through one `transition()` helper per entity that rejects illegal moves and writes a `statusEvents` row.
-8. **Secrets live only in Convex env vars** (Paystack, Google server key, Termii, Resend). The mobile app holds only publishable keys and a restricted Maps SDK key.
+8. **Secrets live only in Convex env vars** (Paystack, Termii, Resend). The mobile app holds only publishable keys. Maps are OpenStreetMap-based and need no keys.
 
 ---
 
@@ -66,7 +66,7 @@ These gate the launch more than the code does. The ops lead starts them in week 
 | L3 | **Paystack balance funding strategy** | Trader transfers come out of the Paystack balance. Card payments settle on a delay, so morning orders may not be in the balance by noon. Decide: keep a **daily float** topped up from the corporate account, and/or set settlement so funds stay in the balance. Confirm with Paystack support. |
 | L4 | **Clerk SMS to Nigerian numbers**: deliverability on MTN/Airtel/Glo/9mobile, plus pricing | If it's poor, move to a custom OTP via Termii (Clerk custom SMS or Convex Auth). Test with real SIMs in week 1. |
 | L5 | **Termii account + sender ID registration** | Sender ID approval in Nigeria takes time |
-| L6 | **Google Cloud project**: billing, Places API (New), Routes API, Maps SDK for Android; budget alerts | Restricted keys per platform |
+| L6 | ~~Google Cloud project~~ replaced on 2026-10-09 by free OpenStreetMap services (MapLibre/OpenFreeMap, Photon, OSRM). Nothing to set up | No keys |
 | L7 | **Google Play Console** developer account (organisation) | D-U-N-S number and verification for organisation accounts take time |
 | L8 | **Domain + email: `ojarun.ng` only** (decided 2026-10-05; register via a NiRA-accredited registrar), Resend domain verification (SPF/DKIM) | Receipts, Paystack callback page (`https://ojarun.ng/pay/return`), privacy policy URL |
 | L9 | **Legal**: terms of service, privacy policy (Nigeria Data Protection Act 2023), wallet terms (credits only, no deposits), shopper employment contracts | Needed for Play listing and checkout copy |
@@ -150,7 +150,7 @@ Package manager: **pnpm** workspaces. Set `node-linker=hoisted` in `.npmrc` so M
 | Backend client | `convex`, `convex/react-clerk` (`ConvexProviderWithClerk`), `convex-helpers` (custom functions, Zod validation) |
 | Forms | `react-hook-form`, `zod`, `@hookform/resolvers` |
 | Camera / images | `expo-camera` (or `expo-image-picker` with camera), `expo-image-manipulator`, `expo-image`, `expo-file-system` |
-| Location / maps | `expo-location` (foreground only), `react-native-maps` (Google provider) |
+| Location / maps | `expo-location` (foreground only), `@maplibre/maplibre-react-native` with OpenFreeMap tiles |
 | Network | `@react-native-community/netinfo` |
 | Sheets, motion, feel | `@gorhom/bottom-sheet`, `react-native-reanimated`, `react-native-gesture-handler`, `react-native-keyboard-controller`, `expo-haptics` |
 | Icons / fonts / images | `phosphor-react-native`, `@expo-google-fonts/plus-jakarta-sans`, `expo-image` (thumbhash placeholders) |
@@ -171,7 +171,7 @@ Package manager: **pnpm** workspaces. Set `node-linker=hoisted` in `.npmrc` so M
 | EAS Update channel | — | `preview` | `production` |
 | Ops dashboard | localhost | Vercel preview | Vercel prod (`ops.ojarun.…`) |
 
-**Convex env vars:** `CLERK_JWT_ISSUER_DOMAIN`, `PAYSTACK_SECRET_KEY`, `GOOGLE_MAPS_SERVER_KEY`, `TERMII_API_KEY`, `TERMII_SENDER_ID`, `RESEND_API_KEY`, `APP_ENV`, `PAYSTACK_CALLBACK_URL`.
+**Convex env vars:** `CLERK_JWT_ISSUER_DOMAIN`, `PAYSTACK_SECRET_KEY`, `TERMII_API_KEY`, `TERMII_SENDER_ID`, `RESEND_API_KEY`, `APP_ENV`, `PAYSTACK_CALLBACK_URL`.
 **Mobile (`EXPO_PUBLIC_*`):** `CONVEX_URL`, `CLERK_PUBLISHABLE_KEY`, `POSTHOG_KEY`, `SENTRY_DSN`. The Maps Android key goes in `app.config.ts`, restricted to the package name and SHA-1.
 
 ### 4.4 CI (GitHub Actions)
@@ -423,7 +423,7 @@ These are unit-tested exhaustively. The server and the client price preview both
 | `addresses` | `list`, `create` (geofence check), `update`, `archive` (customer) | `precomputeDistances` (action) |
 | `places` | `autocomplete(input, sessionToken)`, `placeDetails(placeId, sessionToken)` (action, customer) | — |
 | `markets` / `catalog` | `listActive`, `searchItems`, `presetsFor` (authed) | — |
-| `pricing` | `quoteMarkets(addressId)` → fee per market; `quoteOrder(draft)` (action: fills distance cache via the Routes API, then calls a query) | `getOrComputeDistance` |
+| `pricing` | `quoteMarkets(addressId)` → fee per market; `quoteOrder(draft)` (action: fills distance cache via OSRM, then calls a query) | `getOrComputeDistance` |
 | `slots` | `availableFor(date)` (open, before cutoff, `reserved < capacity`) | `generateDaily` (cron), `closeAtCutoff` (scheduled per slot) |
 | `orders` | `create(clientRequestId, draft)` → `pending_payment` + slot hold; `get`, `listMine`, `cancel` (customer) | `expireStale`, `markPaid` |
 | `checkout` | `initPayment(orderId)` (action → Paystack `/transaction/initialize`) | `verifyAndApply(reference)` (action → `/transaction/verify`) |
@@ -656,16 +656,16 @@ Each milestone ends with a **demo script**. The milestone is done when the demo 
 
 ### M1 — Reference data and ops settings (weeks 2–3)
 **Tasks**
-- Ops pages: Markets CRUD (map pin), Slot templates, Settings (typed form over the Zod schema), Geofence editor (draw a polygon on a Google map, or paste GeoJSON), Catalogue import (CSV).
+- Ops pages: Markets CRUD (map pin), Slot templates, Settings (typed form over the Zod schema), Geofence editor (edit a polygon on a MapLibre map, or paste GeoJSON), Catalogue import (CSV).
 - Seed script (`packages/convex/convex/seed.ts`, internal) for markets, catalogue, templates and settings.
 - `slots.generateDaily` + `closeAtCutoff`.
-- Addresses: Places Autocomplete (New) through a Convex action with **session tokens**, place details, a draggable pin on `react-native-maps`, a landmark field, a server-side geofence check with a friendly rejection message, and an address book.
+- Addresses: Photon (OpenStreetMap) search through a Convex action, "place the pin yourself" with reverse geocoding, a draggable pin on MapLibre, a landmark field, a server-side geofence check with a friendly rejection message, and an address book.
 
 **Demo:** ops adds a market and edits a slot. A customer saves an address in Akure (accepted) and one in Ondo town (rejected with a message). Tomorrow's slots appear after the cron runs.
 
 ### M2 — Ordering and checkout (weeks 3–5)
 **Tasks**
-- Market picker with a delivery fee per market (`pricing.quoteMarkets`, Routes API `computeRouteMatrix` for one origin and many markets, cached per (address, market)).
+- Market picker with a delivery fee per market (`pricing.quoteMarkets`, one OSRM `/table` call for all uncached markets, cached per (address, market)).
 - List builder: catalogue search with aliases, free-text items, a budget per item (`MoneyInput`), preset preference chips plus a note, reorder and delete, and a persisted draft.
 - Slot picker (live capacity), review screen with the full fee breakdown, **buffer picker (0 / 10% / 20%, default 10%) with an explainer sheet**, wallet toggle, and the policy copy (cancellation keeps the Paystack charge; no refunds after acceptance).
 - `orders.create`, `checkout.initPayment`, the webhook, `verifyAndApply`, `expireStale`.
@@ -786,7 +786,7 @@ Long-lead   L1–L12 ───────────────────�
 | Concurrent transfer requests beat the budget cap | The cap check and the insert happen in one Convex mutation, and Convex's serializable transactions make this safe. A test is in place anyway |
 | Expo / NativeWind / MMKV version friction | Pin versions at scaffold time. Upgrade only between milestones, with a dev-client rebuild |
 | Low-end phones choke on the camera or maps | No maps in the shopper app at all. Camera screen is minimal. Photos are compressed before they enter the queue |
-| Google Maps bill surprises | Session tokens, distance cache, a Routes matrix call per address (not per market), budget alerts at ₦ thresholds |
+| Free OpenStreetMap services unavailable | Distance cache with an estimate fallback; pin placement without search; self-hostable via PHOTON_URL / OSRM_URL |
 | Disputes from misreported spending | `amountSpent` is derived from successful transfers only. Photo required before transfer |
 
 ---
