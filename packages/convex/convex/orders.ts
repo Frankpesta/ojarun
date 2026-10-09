@@ -4,6 +4,7 @@ import { internalMutation, internalQuery, type QueryCtx } from "./_generated/ser
 import type { Doc, Id } from "./_generated/dataModel";
 import { customerMutation, customerQuery } from "./lib/auth";
 import { deliveryDistance } from "./lib/distance";
+import { CANCELLABLE, cancelOrder, refundFor } from "./lib/cancel";
 import { appError, ErrorCode } from "./lib/errors";
 import { getSettings } from "./lib/settings";
 import { transitionOrder } from "./lib/stateMachine";
@@ -303,5 +304,84 @@ export const expire = internalMutation({
       .collect();
     for (const p of payments) if (p.status === "initialized") await ctx.db.patch(p._id, { status: "abandoned" });
     return true;
+  },
+});
+
+/** The exact refund before the customer confirms a cancellation (05 §6.4 step 4). */
+export const cancelQuote = customerQuery({
+  args: { orderId: v.id("orders") },
+  handler: async (ctx, { orderId }) => {
+    const order = await ctx.db.get(orderId);
+    if (!order || order.customerId !== ctx.user._id) return null;
+    if (!CANCELLABLE.has(order.status)) return { cancellable: false as const };
+    const { refund, keptCharge } = await refundFor(ctx, order, false);
+    return { cancellable: true as const, refund, keptCharge, unpaid: order.status === "pending_payment" };
+  },
+});
+
+/** Free cancellation until shopping starts. The refund goes to the wallet. */
+export const cancel = customerMutation({
+  args: { orderId: v.id("orders") },
+  handler: async (ctx, { orderId }) => {
+    const order = await ctx.db.get(orderId);
+    if (!order || order.customerId !== ctx.user._id) throw appError(ErrorCode.NOT_FOUND, "Order not found.");
+    if (order.status === "cancelled") return { refund: 0 }; // replay
+    return await cancelOrder(ctx, order, { actorId: ctx.user._id, reason: "Cancelled by customer", refundCharge: false, byOps: false });
+  },
+});
+
+const RECEIPT_TYPES = new Set(["leftover_credit", "rejection_credit", "price_check_debit", "cancellation_refund", "adjustment"]);
+
+/** The final receipt: what was bought for how much, and what came back (05 §9 M6). */
+export const receipt = customerQuery({
+  args: { orderId: v.id("orders") },
+  handler: async (ctx, { orderId }) => {
+    const order = await ctx.db.get(orderId);
+    if (!order || order.customerId !== ctx.user._id) return null;
+    const [items, entries, market] = await Promise.all([
+      ctx.db
+        .query("orderItems")
+        .withIndex("by_order", (q) => q.eq("orderId", orderId))
+        .collect(),
+      ctx.db
+        .query("walletEntries")
+        .withIndex("by_user", (q) => q.eq("userId", order.customerId))
+        .filter((q) => q.eq(q.field("orderId"), orderId))
+        .collect(),
+      ctx.db.get(order.marketId),
+    ]);
+    const lines = entries.filter((e) => RECEIPT_TYPES.has(e.type));
+    const paid = order.totals.walletApplied + order.totals.chargeAmount;
+    const extras = -lines.filter((e) => e.type === "price_check_debit").reduce((s, e) => s + e.amount, 0);
+    const back = lines.filter((e) => e.amount > 0).reduce((s, e) => s + e.amount, 0);
+    const completedAt = (
+      await ctx.db
+        .query("statusEvents")
+        .withIndex("by_order", (q) => q.eq("orderId", orderId))
+        .collect()
+    ).find((e) => e.status === "completed")?.at;
+    return {
+      code: orderCode(order._id),
+      status: order.status,
+      marketName: market?.name ?? "Market",
+      completedAt: completedAt ?? null,
+      items: items
+        .sort((a, b) => a.position - b.position)
+        .map((i) => ({
+          _id: i._id,
+          name: i.name,
+          status: i.status,
+          funded: i.budget + i.approvedExtra,
+          spent: i.amountSpent,
+          quantityNote: i.quantityNote ?? null,
+        })),
+      totals: order.totals,
+      paid,
+      extras,
+      credits: lines.filter((e) => e.amount > 0).map((e) => ({ type: e.type, amount: e.amount, note: e.note ?? null })),
+      back,
+      /** What the shopping really cost after change and refunds came back. */
+      net: paid + extras - back,
+    };
   },
 });

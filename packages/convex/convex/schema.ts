@@ -58,6 +58,16 @@ export default defineSchema({
     status: userStatus,
     /** Cache of sum(walletEntries.amount); only lib/wallet.ts writes it. */
     walletBalance: kobo,
+    /** Where withdrawals go. The name comes from the bank, never from the app. */
+    payoutAccount: v.optional(
+      v.object({
+        accountNumber: v.string(),
+        bankCode: v.string(),
+        resolvedName: v.string(),
+        recipientCode: v.optional(v.string()),
+      }),
+    ),
+    deletedAt: v.optional(v.number()),
   })
     .index("by_clerkId", ["clerkId"])
     .index("by_role", ["role"])
@@ -180,7 +190,14 @@ export default defineSchema({
     batchId: v.optional(v.id("batches")),
     shopperId: v.optional(v.id("users")),
     cancelReason: v.optional(v.string()),
+    cancelledBy: v.optional(v.id("users")),
     completedBy: v.optional(v.id("users")),
+    /** Set when ops completes on the customer's behalf. */
+    completedReason: v.optional(v.string()),
+    /** How far the shopper was from the pin when they tapped Arrived. */
+    arrivedDistanceMeters: v.optional(v.number()),
+    /** The shopper couldn't reach the customer at the door. */
+    unavailableAt: v.optional(v.number()),
   })
     .index("by_customer", ["customerId"])
     .index("by_status", ["status"])
@@ -207,6 +224,8 @@ export default defineSchema({
     shopperNote: v.optional(v.string()),
     quantityNote: v.optional(v.string()),
     rejectionReason: v.optional(v.string()),
+    /** What the item was before the customer rejected it, so they can undo before accepting. */
+    statusBeforeReject: v.optional(v.union(v.literal("bought"), v.literal("adjusted"))),
     rejectionOutcome: v.optional(
       v.union(v.literal("returned_to_trader"), v.literal("staff"), v.literal("discarded")),
     ),
@@ -414,6 +433,9 @@ export default defineSchema({
       v.literal("failed"),
       v.literal("reversed"),
     ),
+    failureReason: v.optional(v.string()),
+    sentAt: v.optional(v.number()),
+    settledAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
     .index("by_status", ["status"])
@@ -432,10 +454,14 @@ export default defineSchema({
       v.literal("transfer_failed"),
       v.literal("transfer_reversed"),
       v.literal("paystack_config"),
+      v.literal("customer_unavailable"),
+      v.literal("withdrawal_failed"),
     ),
     severity: v.union(v.literal("critical"), v.literal("warning")),
     message: v.string(),
     transferId: v.optional(v.id("traderTransfers")),
+    orderId: v.optional(v.id("orders")),
+    withdrawalId: v.optional(v.id("withdrawals")),
     resolvedAt: v.optional(v.number()),
     resolvedBy: v.optional(v.id("users")),
   })

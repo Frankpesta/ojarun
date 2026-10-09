@@ -3,6 +3,8 @@ import type { Doc, Id } from "../_generated/dataModel";
 
 type AlertInput = Pick<Doc<"opsAlerts">, "key" | "kind" | "severity" | "message"> & {
   transferId?: Id<"traderTransfers">;
+  orderId?: Id<"orders">;
+  withdrawalId?: Id<"withdrawals">;
 };
 
 async function openAlert(ctx: MutationCtx, key: string) {

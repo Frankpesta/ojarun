@@ -57,6 +57,8 @@ http.route({
     } else if (event.startsWith("transfer.") && reference.startsWith("ojt_")) {
       // transfer.success | transfer.failed | transfer.reversed: confirm with Paystack, then apply.
       await ctx.scheduler.runAfter(0, internal.transfers.verify, { reference });
+    } else if (event.startsWith("transfer.") && reference.startsWith("ojw_")) {
+      await ctx.scheduler.runAfter(0, internal.withdrawals.verify, { reference });
     }
     return new Response("ok", { status: 200 });
   }),
