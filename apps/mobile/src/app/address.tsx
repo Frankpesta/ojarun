@@ -137,7 +137,8 @@ function Editor({ existing, geofence, onboarding }: { existing: Existing | null;
 
   return (
     <View className="flex-1 bg-bg">
-      <KeyboardAvoidingView behavior="padding" className="flex-1">
+      {/* style, not className: NativeWind doesn't map className on keyboard-controller's view. */}
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <View className="flex-1">
           <MapLibreMap
             style={{ flex: 1 }}

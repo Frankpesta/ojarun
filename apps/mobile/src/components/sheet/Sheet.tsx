@@ -158,7 +158,7 @@ export function Sheet({
 
   const renderHandle = useCallback(
     () => (
-      <View className="items-center pt-2 pb-2">
+      <View className="items-center pt-3 pb-3">
         <View
           style={{
             width: sizes.grabberWidth,
@@ -193,7 +193,7 @@ export function Sheet({
   // Animation and className sit on separate views: NativeWind drops className on animated views.
   const header = (
     <Animated.View style={headerStyle}>
-      <View className="flex-row items-start px-5 pt-1 pb-4 gap-2">
+      <View className="flex-row items-start px-5 pt-3 pb-4 gap-2">
         {onBack ? (
           <Pressable
             onPress={onBack}

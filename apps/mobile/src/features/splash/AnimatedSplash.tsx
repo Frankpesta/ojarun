@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import Svg, { Path, Rect } from "react-native-svg";
 import Animated, {
@@ -51,7 +51,7 @@ function BasketMark({ size }: { size: number }) {
   );
 }
 
-function FloatingSticker({ index, width, height, reduce }: { index: number; width: number; height: number; reduce: boolean }) {
+function FloatingSticker({ index, reduce }: { index: number; reduce: boolean }) {
   const s = STICKERS[index]!;
   const p = useSharedValue(reduce ? 1 : 0);
   useEffect(() => {
@@ -62,7 +62,7 @@ function FloatingSticker({ index, width, height, reduce }: { index: number; widt
     transform: [{ scale: 0.4 + 0.6 * p.value }, { rotate: `${s.rotate * p.value}deg` }],
   }));
   return (
-    <Animated.View style={[{ position: "absolute", left: s.x * width, top: s.y * height }, style]}>
+    <Animated.View style={[{ position: "absolute", left: `${s.x * 100}%`, top: `${s.y * 100}%` }, style]}>
       <Sticker kind={s.kind} size={s.size} />
     </Animated.View>
   );
@@ -81,7 +81,6 @@ function LoadingDot({ index, progress }: { index: number; progress: SharedValue<
  * then plays the brand moment and fades into the app once the router is ready.
  */
 export function AnimatedSplash() {
-  const { width, height } = useWindowDimensions();
   const reduce = useReducedMotion();
   const appReady = useSplash((s) => s.appReady);
   const [minElapsed, setMinElapsed] = useState(false);
@@ -121,9 +120,6 @@ export function AnimatedSplash() {
   const wordStyle = useAnimatedStyle(() => ({ opacity: words.value, transform: [{ translateY: 14 * (1 - words.value) }] }));
   if (gone) return null;
 
-  const cx = width / 2;
-  const cy = height / 2;
-
   return (
     <Animated.View
       pointerEvents={appReady && minElapsed ? "none" : "auto"}
@@ -132,14 +128,12 @@ export function AnimatedSplash() {
       accessible
       accessibilityLabel="OjaRun is loading"
     >
-      <Animated.View style={[StyleSheet.absoluteFill, ringStyle]}>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.centre, ringStyle]}>
         {[720, 520].map((d, i) => (
           <View
             key={d}
             style={{
               position: "absolute",
-              left: cx - d / 2,
-              top: cy - d / 2,
               width: d,
               height: d,
               borderRadius: d / 2,
@@ -151,8 +145,6 @@ export function AnimatedSplash() {
         <View
           style={{
             position: "absolute",
-            left: cx - 150,
-            top: cy - 150,
             width: 300,
             height: 300,
             borderRadius: 150,
@@ -162,41 +154,43 @@ export function AnimatedSplash() {
       </Animated.View>
 
       {STICKERS.map((_, i) => (
-        <FloatingSticker key={i} index={i} width={width} height={height} reduce={reduce} />
+        <FloatingSticker key={i} index={i} reduce={reduce} />
       ))}
 
-      <Animated.View
-        style={[
-          {
-            position: "absolute",
-            left: cx - TILE / 2,
-            top: cy - TILE / 2,
-            width: TILE,
-            height: TILE,
-            borderRadius: 37,
-            backgroundColor: "#15803D",
-            alignItems: "center",
-            justifyContent: "center",
-            shadowColor: "#000",
-            shadowOpacity: 0.35,
-            shadowRadius: 24,
-            shadowOffset: { width: 0, height: 18 },
-            elevation: 16,
-          },
-          tileStyle,
-        ]}
-      >
-        <BasketMark size={78} />
-      </Animated.View>
+      {/* Flexbox centring, not window maths: the tile must land exactly where the native splash drew it. */}
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.centre]}>
+        <View style={{ width: TILE, height: TILE }}>
+          <Animated.View
+            style={[
+              {
+                width: TILE,
+                height: TILE,
+                borderRadius: 37,
+                backgroundColor: "#15803D",
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: "#000",
+                shadowOpacity: 0.35,
+                shadowRadius: 24,
+                shadowOffset: { width: 0, height: 18 },
+                elevation: 16,
+              },
+              tileStyle,
+            ]}
+          >
+            <BasketMark size={78} />
+          </Animated.View>
 
-      <Animated.View style={[{ position: "absolute", left: 0, right: 0, top: cy + TILE / 2 + 22, alignItems: "center" }, wordStyle]}>
-        <Text variant="display" tone="inherit" style={{ color: "#FFFFFF", fontSize: 44, lineHeight: 50, letterSpacing: -1.4 }}>
-          Oja<Text variant="display" tone="inherit" style={{ color: "#FF8A5B", fontSize: 44, lineHeight: 50 }}>Run</Text>
-        </Text>
-        <Text variant="bodyStrong" tone="inherit" style={{ color: "#A7D7B5", marginTop: 6 }}>
-          Akure's markets, delivered
-        </Text>
-      </Animated.View>
+          <Animated.View style={[{ position: "absolute", top: TILE + 22, left: -160, right: -160, alignItems: "center" }, wordStyle]}>
+            <Text variant="display" tone="inherit" style={{ color: "#FFFFFF", fontSize: 44, lineHeight: 50, letterSpacing: -1.4 }}>
+              Oja<Text variant="display" tone="inherit" style={{ color: "#FF8A5B", fontSize: 44, lineHeight: 50 }}>Run</Text>
+            </Text>
+            <Text variant="bodyStrong" tone="inherit" style={{ color: "#A7D7B5", marginTop: 6 }}>
+              Akure's markets, delivered
+            </Text>
+          </Animated.View>
+        </View>
+      </View>
 
       <View style={{ position: "absolute", bottom: 64, left: 0, right: 0, flexDirection: "row", justifyContent: "center", gap: 8 }}>
         {[0, 1, 2].map((i) => (
@@ -206,3 +200,7 @@ export function AnimatedSplash() {
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  centre: { alignItems: "center", justifyContent: "center" },
+});
