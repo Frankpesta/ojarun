@@ -72,26 +72,28 @@ function ToastHost({ toast, offset, onDismiss }: { toast: ToastItem | null; offs
         layout={LinearTransition}
         accessibilityLiveRegion="polite"
         accessibilityRole="alert"
-        className="mx-4 flex-row items-center gap-3 rounded-card bg-ink px-4 py-3"
       >
-        <Icon size={20} color={iconColor} weight="fill" />
-        <Text variant="small" className="flex-1 text-bg">
-          {toast.message}
-        </Text>
-        {toast.action ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              toast.action!.onPress();
-              onDismiss();
-            }}
-            className="-my-2 -mr-2 px-3 py-3"
-          >
-            <Text variant="smallStrong" style={{ color: colors.brandTint }}>
-              {toast.action.label}
-            </Text>
-          </Pressable>
-        ) : null}
+        {/* className on the inner view: NativeWind drops it on animated views. */}
+        <View className="mx-4 flex-row items-center gap-3 rounded-card bg-ink px-4 py-3">
+          <Icon size={20} color={iconColor} weight="fill" />
+          <Text variant="small" tone="inherit" className="flex-1" style={{ color: colors.bg }}>
+            {toast.message}
+          </Text>
+          {toast.action ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                toast.action!.onPress();
+                onDismiss();
+              }}
+              className="-my-2 -mr-2 px-3 py-3"
+            >
+              <Text variant="smallStrong" style={{ color: colors.brandTint }}>
+                {toast.action.label}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       </Animated.View>
     </View>
   );
